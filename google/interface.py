@@ -13,7 +13,8 @@ scopes = [
     ]
 
 spreadsheet_id = "1iC75ObLb5ZvJ4NedUmnA5O98XGVNYno0IeJYFg2DVZ8"
-SAMPLE_RANGE_NAME = "Class Data!A2:F"
+SAMPLE_RANGE_NAME = "Tasks!A2:D"
+
 
 def main():
     creds = None
@@ -23,14 +24,14 @@ def main():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+            creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                  "credentials.json", scopes
             )
-        creds = flow.run_local_server(port=0)
+            creds = flow.run_local_server(port=0)
         with open("token.json", "w") as token:
-             token.write(creds.to_json())
+            token.write(creds.to_json())
 
     try:
         service = build("sheets", "v4", credentials=creds)
@@ -50,11 +51,14 @@ def main():
 
         print("Name, Major:")
         for row in values:
+            if not row:
+                continue
             # Print columns A and E, which correspond to indices 0 and 4.
-            print(f"{row[0]}, {row[4]}")
+            print(f"{row[0]}")
     except HttpError as err:
         print(err)
 
+
 if __name__ == "__main__":
-  main()
-                
+    main()
+
