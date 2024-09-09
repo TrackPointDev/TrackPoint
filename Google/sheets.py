@@ -12,6 +12,25 @@ cache = {}
 
 
 @dataclass
+class Task:
+    title: Optional[str]
+    comments: Optional[str]
+    issueID: Optional[str]
+    priority: Optional[str]
+    description: Optional[str]
+    story_point: Optional[int]
+
+
+@dataclass
+class Epic:
+    title: Optional[str]
+    problem: Optional[str]
+    feature: Optional[str]
+    value: Optional[str]
+    tasks: List[Task]
+
+
+@dataclass
 class Row:
     """
     Represents a row in a Google Sheet spreadsheet
@@ -45,6 +64,16 @@ class Row:
     def has_header(self, header):
         """Returns True if the row has a column with the given header"""
         return header in self
+
+    def to_task(self) -> Task:
+        return Task(
+            title=self.values.get("title", ""),
+            comments=self.values.get("duplicate / comments", ""),
+            issueID=self.values.get("issue id", ""),
+            priority=self.values.get("priority", ""),
+            description=self.values.get("description", ""),
+            story_point=self.values.get("story point", 0)
+        )
 
 
 @dataclass
@@ -160,6 +189,22 @@ class Sheet:
         return header in self
 
 
+def transform_to_epics(sheet: Sheet) -> List[Epic]:
+    epics = {}
+    for row in sheet:
+        epic_title = row.values.get("title", "")
+        if epic_title not in epics:
+            epics[epic_title] = Epic(
+                title=epic_title,
+                problem=row.values.get("problem", ""),
+                feature=row.values.get("feature", ""),
+                value=row.values.get("value", ""),
+                tasks=[]
+            )
+        epics[epic_title].tasks.append(row.to_task())
+    return list(epics.values())
+
+
 def get_sheet(
     sheet_name: Optional[str] = None,
     spreadsheet_id: Optional[str] = None,
@@ -219,6 +264,10 @@ def get_sheets_api():
 
 
 def clean(value: str) -> str:
+
+    if value is None:
+        return ""
+
     return value.strip().lower()
 
 
