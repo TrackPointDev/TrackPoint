@@ -1,10 +1,8 @@
-import os.path
-
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from Google import authenticate_service
+
 
 cache = {}
 
@@ -13,25 +11,12 @@ scopes = [
     ]
 
 spreadsheet_id = "1iC75ObLb5ZvJ4NedUmnA5O98XGVNYno0IeJYFg2DVZ8"
-SAMPLE_RANGE_NAME = "Tasks!A2:D"
+SAMPLE_RANGE_NAME = "Tasks!A2:I"
 
 
 def main():
-    creds = None
 
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", scopes)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                 "credentials.json", scopes
-            )
-            creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
+    creds = authenticate_service()
 
     try:
         service = build("sheets", "v4", credentials=creds)
@@ -49,12 +34,13 @@ def main():
             print("No data found.")
             return
 
-        print("Name, Major:")
+        print("Title, Comments, Issue ID, Priority, Description, Story Point, Created, Updated")
         for row in values:
             if not row:
+                print("N/A")
                 continue
             # Print columns A and E, which correspond to indices 0 and 4.
-            print(f"{row[0]}")
+            print(f"{row[0]}, {row[1]}, {row[2]}")
     except HttpError as err:
         print(err)
 
