@@ -6,7 +6,7 @@ from itertools import zip_longest
 from typing import Dict, List, Union, Optional
 from googleapiclient.discovery import build
 
-from Google import authenticate_service
+from src.Google import authenticate_service
 
 cache = {}
 
@@ -189,20 +189,28 @@ class Sheet:
         return header in self
 
 
-def transform_to_epics(sheet: Sheet) -> List[Epic]:
-    epics = {}
+def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
+    title = problem = feature = value = None
+
     for row in sheet:
-        epic_title = row.values.get("title", "")
-        if epic_title not in epics:
-            epics[epic_title] = Epic(
-                title=epic_title,
-                problem=row.values.get("problem", ""),
-                feature=row.values.get("feature", ""),
-                value=row.values.get("value", ""),
+        if row.index == 1:
+            title = row.values.get("epic card", "")
+        elif row.index == 2:
+            problem = row.values.get("problem", "")
+        elif row.index == 3:
+            feature = row.values.get("feature (solution)", "")
+        elif row.index == 4:
+            value = row.values.get("value", "")
+
+        if title:
+            return Epic(
+                title=title,
+                problem=problem,
+                feature=feature,
+                value=value,
                 tasks=[]
             )
-        epics[epic_title].tasks.append(row.to_task())
-    return list(epics.values())
+        return None
 
 
 def get_sheet(

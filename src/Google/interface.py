@@ -4,7 +4,7 @@ from googleapiclient.errors import HttpError
 import json
 import dataclasses
 
-from Google import sheets
+from src.Google import sheets
 
 
 cache = {}
@@ -24,14 +24,19 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 def main():
     try:
         task_list = []
+        epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
         tasks_sheet = sheets.get_sheet("Tasks", spreadsheet_id)
 
         for task in tasks_sheet:
             task_object = task.to_task()
             task_list.append(task_object)
 
-        json_task = json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4)
-        print(json_task)
+        epic = sheets.transform_to_epics(epic_sheet)
+        if epic:
+            epic.tasks = task_list
+
+        epic_json = json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4)
+        print(epic_json)
     except HttpError as err:
         print(err)
 
