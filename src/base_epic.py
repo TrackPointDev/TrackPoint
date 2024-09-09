@@ -27,3 +27,7 @@ class BaseEpic(ABC):
     @abstractmethod
     def save_json(self, file_path):
         pass
+    
+    @abstractmethod
+    def edit_task(self, task_title, new_data):
+        pass
