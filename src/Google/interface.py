@@ -23,19 +23,20 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 def main():
     try:
-        task_list = []
         epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
         tasks_sheet = sheets.get_sheet("Tasks", spreadsheet_id)
 
-        for task in tasks_sheet:
-            task_object = task.to_task()
-            task_list.append(task_object)
+        epic_data = sheets.transform_to_epics(epic_sheet)
 
-        epic = sheets.transform_to_epics(epic_sheet)
-        if epic:
-            epic.tasks = task_list
+        if epic_data:
+            task_list = []
+            for task in tasks_sheet:
+                task_object = task.to_task()
+                task_list.append(task_object)
+            epic_data.tasks = task_list
 
-        epic_json = json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4)
+        epic_json = json.dumps(epic_data, cls=EnhancedJSONEncoder, indent=4)
+
         print(epic_json)
     except HttpError as err:
         print(err)

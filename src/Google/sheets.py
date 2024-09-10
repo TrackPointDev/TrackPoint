@@ -190,27 +190,38 @@ class Sheet:
 
 
 def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
-    title = problem = feature = value = None
+    """
+    Transforms a sheet into an Epic object.
+    """
 
-    for row in sheet:
-        if row.index == 1:
-            title = row.values.get("epic card", "")
-        elif row.index == 2:
-            problem = row.values.get("problem", "")
-        elif row.index == 3:
-            feature = row.values.get("feature (solution)", "")
-        elif row.index == 4:
-            value = row.values.get("value", "")
+    # TODO: The way this code has hardcoded the indexes is utterly fucking retarded. For now it works but refactor later
+    title, problem, feature, value = None, None, None, None
 
-        if title:
-            return Epic(
-                title=title,
-                problem=problem,
-                feature=feature,
-                value=value,
-                tasks=[]
-            )
-        return None
+    title_index = 2
+    problem_index = 3
+    feature_index = 4
+    value_index = 5
+    column_index = "b"
+
+    title_row = sheet.row(title_index - 1)
+    problem_row = sheet.row(problem_index - 1)
+    feature_row = sheet.row(feature_index - 1)
+    value_row = sheet.row(value_index - 1)
+
+    title = title_row[column_index]
+    problem = problem_row[column_index]
+    feature = feature_row[column_index]
+    value = value_row[column_index]
+
+
+    return Epic(
+        title=title,
+        problem=problem,
+        feature=feature,
+        value=value,
+        tasks=[]
+    )
+
 
 
 def get_sheet(
@@ -272,10 +283,8 @@ def get_sheets_api():
 
 
 def clean(value: str) -> str:
-
     if value is None:
-        return ""
-
+        return "blank"
     return value.strip().lower()
 
 
