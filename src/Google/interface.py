@@ -50,8 +50,7 @@ def main():
                      "feature": epic_data.feature,
                      "value": epic_data.value,
                      "tasks": task_list})
-
-        print("Document added to Firestore")
+        print("Document successfully added to Firestore")
 
     except HttpError as err:
         print(err)

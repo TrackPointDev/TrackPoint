@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45e54151-36f3-47ac-bf74-934c484ccf7b" name="Changes" comment="We can now generate a list of tasks from the &quot;task&quot; sheet in Google sheets">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="45e54151-36f3-47ac-bf74-934c484ccf7b" name="Changes" comment="Added support for writing to Firebase's Firestore service.">
       <change beforePath="$PROJECT_DIR$/src/Google/interface.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Google/interface.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Google/sheets.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Google/sheets.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -173,7 +169,15 @@
       <option name="project" value="LOCAL" />
       <updated>1725886976220</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Added support for writing to Firebase's Firestore service.">
+      <option name="closed" value="true" />
+      <created>1726498211154</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1726498211154</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -185,12 +189,13 @@
     <MESSAGE value="Added framework for editing and working with google sheets. Now we have dataclasses for sheets, rows and columns." />
     <MESSAGE value="We can now generate a list of tasks from the &quot;task&quot; sheet in Google sheets" />
     <MESSAGE value="test" />
-    <option name="LAST_COMMIT_MESSAGE" value="test" />
+    <MESSAGE value="Added support for writing to Firebase's Firestore service." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added support for writing to Firebase's Firestore service." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/TrackPoint$interface__1_.coverage" NAME="interface (1) Coverage Results" MODIFIED="1725886439184" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Google" />
     <SUITE FILE_PATH="coverage/TrackPoint$interface__2_.coverage" NAME="interface (2) Coverage Results" MODIFIED="1725881255562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gsheets" />
-    <SUITE FILE_PATH="coverage/TrackPoint$interface.coverage" NAME="interface Coverage Results" MODIFIED="1726497997659" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/Google" />
+    <SUITE FILE_PATH="coverage/TrackPoint$interface.coverage" NAME="interface Coverage Results" MODIFIED="1726498114607" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/Google" />
     <SUITE FILE_PATH="coverage/TrackPoint$interface__3_.coverage" NAME="interface Coverage Results" MODIFIED="1725890093096" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/Google" />
   </component>
 </project>
