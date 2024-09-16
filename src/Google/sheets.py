@@ -195,7 +195,6 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
     """
 
     # TODO: The way this code has hardcoded the indexes is utterly fucking retarded. For now it works but refactor later
-    title, problem, feature, value = None, None, None, None
 
     title_index = 2
     problem_index = 3
@@ -212,7 +211,6 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
     problem = problem_row[column_index]
     feature = feature_row[column_index]
     value = value_row[column_index]
-
 
     return Epic(
         title=title,

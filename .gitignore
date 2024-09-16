@@ -1,3 +1,4 @@
 /src/Google/credentials.json
 /src/Google/token.json
 
+/src/database/firebase_creds.json
