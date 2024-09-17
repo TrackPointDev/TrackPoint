@@ -13,6 +13,7 @@ cache = {}
 
 @dataclass
 class Task:
+    """Dataclass representing a task in a Google Sheet spreadsheet (I.e a row)"""
     title: Optional[str]
     comments: Optional[str]
     issueID: Optional[str]
@@ -23,6 +24,7 @@ class Task:
 
 @dataclass
 class Epic:
+    """Dataclass representing an epic in a Google Sheet spreadsheet"""
     title: Optional[str]
     problem: Optional[str]
     feature: Optional[str]
@@ -66,6 +68,7 @@ class Row:
         return header in self
 
     def to_task(self) -> Task:
+        """Converts a row in the Google sheet to a Task object"""
         return Task(
             title=self.values.get("title", ""),
             comments=self.values.get("duplicate / comments", ""),
@@ -194,7 +197,7 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
     Transforms a sheet into an Epic object.
     """
 
-    # TODO: The way this code has hardcoded the indexes is utterly fucking retarded. For now it works but refactor later
+    # TODO: Hardcoding the indexes is utterly fucking retarded. For now it works, but refactor later
 
     title_index = 2
     problem_index = 3
@@ -219,7 +222,6 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
         value=value,
         tasks=[]
     )
-
 
 
 def get_sheet(

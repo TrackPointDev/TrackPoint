@@ -6,8 +6,15 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 cache = {}
 
+base_dir = os.path.dirname(__file__)
+cred_path = os.path.join(base_dir, 'credentials.json')
+
 
 def authenticate_service():
+    """Authenticate the service account with Google Sheets API.
+
+    See docs: https://developers.google.com/sheets/api/quickstart/python"""
+
     if "credentials" in cache:
         return cache["credentials"]
 
@@ -25,7 +32,7 @@ def authenticate_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", scopes
+                cred_path, scopes
             )
             creds = flow.run_local_server(port=0)
         with open("token.json", "w") as token:
