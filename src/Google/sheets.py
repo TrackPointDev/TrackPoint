@@ -6,7 +6,7 @@ from itertools import zip_longest
 from typing import Dict, List, Union, Optional
 from googleapiclient.discovery import build
 
-from src.Google import authenticate_service
+from Google import authenticate_service
 
 cache = {}
 

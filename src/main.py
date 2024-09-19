@@ -1,11 +1,16 @@
+import sys
+  
+# adding src to the system path
+sys.path.insert(0, '/workspaces/TrackPoint/src')
+
 from googleapiclient.errors import HttpError
 
 import json
 import dataclasses
 
-from src.Google import sheets
-from src.database import initfirebase
-from src.github import create_github_issue
+from Google import sheets
+from database import initfirebase
+from github import create_github_issue
 
 cache = {}
 

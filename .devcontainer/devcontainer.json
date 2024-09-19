@@ -7,7 +7,12 @@
 	"features": {
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
-	}
+	},
+
+	"containerEnv": {
+		"PYTHONPATH": "/workspaces",
+		"WORKSPACEPATH": "${containerWorkspaceFolder:PYTHONPATH}"
+	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -16,10 +21,51 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+	"postCreateCommand": "pip3 install --user -r requirements.txt",
 
 	// Configure tool-specific properties.
-	// "customizations": {},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-toolsai.jupyter",
+				"ms-vscode-remote.remote-containers",
+				"ms-vscode-remote.vscode-remote-extensionpack",
+				"ms-azuretools.vscode-docker",
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"GitHub.remotehub",
+				"VisualStudioExptTeam.vscodeintellicode",
+				"VisualStudioExptTeam.intellicode-api-usage-examples",
+				"ms-toolsai.vscode-jupyter-cell-tags",
+				"ms-toolsai.jupyter-keymap",
+				"Postman.postman-for-vscode",
+				"donjayamanne.python-environment-manager",
+				"ms-python.debugpy",
+				"ms-vscode.remote-repositories",
+				"mhutchie.git-graph",
+				"GitHub.vscode-pull-request-github",
+				"eamodio.gitlens",
+				"zhuangtongfa.material-theme",
+				"ms-python.autopep8"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"[python]": {
+					"diffEditor.ignoreTrimWhitespace": false,
+					"gitlens.codeLens.symbolScopes": [
+						"!Module"
+					],
+					"editor.formatOnType": true,
+					"editor.wordBasedSuggestions": "off",
+					"editor.defaultFormatter": "ms-python.autopep8"
+				},
+                "python.formatting.autopep8Path": "/usr/local/py-utils/bin/autopep8",
+                "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+                "python.formatting.yapfPath": "/usr/local/py-utils/bin/yapf"
+			}
+		}
+	}
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
