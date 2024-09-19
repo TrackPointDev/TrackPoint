@@ -6,7 +6,7 @@ owner = "TrackPointDev"
 repo = "TrackPoint"
 
 # This is a secret value, do NOT hardcode it in the code. Use environment variables instead.
-github_token = "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"     # Replace with your own GitHub token, remember to give it the proper permissions.
+github_token = ""     # Replace with your own GitHub token, remember to give it the proper permissions.
 
 
 # TODO: Make "owner" and "repo" parameters dynamic. Such that we can pass different owners/repos to the function
