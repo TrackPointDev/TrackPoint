@@ -26,7 +26,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 spreadsheet_id = "1iC75ObLb5ZvJ4NedUmnA5O98XGVNYno0IeJYFg2DVZ8"     # ID of the current spreadsheet.
 
-
 def main():
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.

@@ -46,7 +46,6 @@
 				"mhutchie.git-graph",
 				"GitHub.vscode-pull-request-github",
 				"eamodio.gitlens",
-				"zhuangtongfa.material-theme",
 				"ms-python.autopep8"
 			],
 			"settings": {
