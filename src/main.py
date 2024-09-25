@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, '/workspaces/TrackPoint/src')
 
 from database.setup import setup_database
-from database.fetch import fetch_database
+from database.manager import fetch_database
 
 spreadsheet_id = "1iC75ObLb5ZvJ4NedUmnA5O98XGVNYno0IeJYFg2DVZ8"     # ID of the current spreadsheet.
 db_collection = "kevintest"
