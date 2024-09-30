@@ -8,7 +8,8 @@ def fetch_database(db_collection, db_document):
         doc = doc_ref.get()
         if doc.exists:
             data = doc.to_dict()
-            return json.dumps(data, indent=4)
+            return data
+            #return json.dumps(data, indent=4)
         else:
             print(f"No such document {db_document} in collection {db_collection}")
             return None
