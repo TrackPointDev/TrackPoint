@@ -22,6 +22,7 @@ def main():
     tasks_with_title = [task for task in data['tasks'] if task.get('title')]
 
     # Create an instance of the github_epic class should maybe be moved to the database manager or smth
+    #small change
     epic_title = data['title']
     epic_problem = data['problem']
     epic_feature = data['feature']
