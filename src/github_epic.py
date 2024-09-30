@@ -2,7 +2,7 @@
 import os
 import time
 import httpx 
-from .base_epic import BaseEpic
+from base_epic import BaseEpic
 
 class github_epic(BaseEpic):
     def __init__(self, owner, repo, *args, **kwargs):
@@ -37,7 +37,7 @@ class github_epic(BaseEpic):
                 return True
         return False
     
-    def create_github_issues(self, data):
+    def create_github_issues(self):
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {
             "Accept": "application/vnd.github+json",
@@ -47,7 +47,7 @@ class github_epic(BaseEpic):
         for task in self.tasks:
             data = {
                 "title": task.get("title", ""),
-                "body": task.get("body", ""),
+                "body": self.format_body(task),
             }
   
             try:
@@ -62,3 +62,18 @@ class github_epic(BaseEpic):
                 print(f"An error occurred: {exc}")
             
             time.sleep(1)  # Add a delay to avoid hitting the rate limit
+
+    def format_body(self, task):
+        # Format the body of the GitHub issue with task details
+        body = (
+            f"**Description:** {task.get('description', 'No description provided')}\n\n"
+            f"**Priority:** {task.get('priority', 'No priority specified')}\n\n"
+            f"**Story Point:** {task.get('story_point', 'Not estimated')}\n\n"
+            f"**Comments:** {task.get('comments', 'No comments')}\n"
+        )
+        return body
+
+# TODO: Having all the parameters in the request be arguments to this function is a little cluttered. Consider
+#  having two arguments as dicts, one for the header and one for the data. This would make the function call
+#  cleaner and more readable. Then retrieve the relevant parameters from the dicts in the function body and
+#  pass it to the request.
