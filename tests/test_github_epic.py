@@ -11,7 +11,7 @@ class TestCreateGithubIssues(unittest.TestCase):
         self.tasks = [{"title": "Test Issue", "description": "Test Description", "priority": "High", "story_point": 5, "comments": "Test comment"}]
 
     @patch('httpx.post')
-    def test_create_github_issues_success(self, mock_post):
+    def test_create_issues_success(self, mock_post):
         # Simulate a successful response
         mock_response = MagicMock()
         mock_response.status_code = 201
@@ -19,7 +19,7 @@ class TestCreateGithubIssues(unittest.TestCase):
         mock_post.return_value = mock_response
 
         # Call the function
-        self.create_github_issues()
+        self.create_issues()
 
         # Assert that the post request was made with the correct parameters
         mock_post.assert_called_once_with(
@@ -36,7 +36,7 @@ class TestCreateGithubIssues(unittest.TestCase):
         )
 
     @patch('httpx.post')
-    def test_create_github_issues_failure(self, mock_post):
+    def test_create_issues_failure(self, mock_post):
         # Simulate a failed response
         mock_response = MagicMock()
         mock_response.status_code = 400
@@ -44,7 +44,7 @@ class TestCreateGithubIssues(unittest.TestCase):
         mock_post.return_value = mock_response
 
         # Call the function
-        self.create_github_issues()
+        self.create_issues()
 
         # Assert that the post request was made
         mock_post.assert_called_once()
@@ -55,12 +55,12 @@ class TestCreateGithubIssues(unittest.TestCase):
         mock_post.side_effect = httpx.HTTPError("An error occurred")
 
         # Call the function
-        self.create_github_issues()
+        self.create_issues()
 
         # Assert that the post request was attempted
         mock_post.assert_called_once()
 
-    def create_github_issues(self):
+    def create_issues(self):
         # This is a simplified version of your function for testing purposes
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {

@@ -11,6 +11,7 @@ class TestMockEpic(unittest.TestCase):
         logger.info("Setting up test environment...")
         self.base_epic = MockEpic("Test Epic", "Problem", "Feature", "Value")
         logger.debug(f"Created MockEpic instance: {self.base_epic}")
+        self.base_epic.start()
 
     def test_init(self):
         logger.info("Running test_init...")
