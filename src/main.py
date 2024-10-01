@@ -29,7 +29,6 @@ def main():
     secret_id = "hamsterpants-github-pat"
     version_id = "latest"
     token = access_secret_version(project_id, secret_id, version_id)
-    print(token)
 
     epic_title = data['title']
     epic_problem = data['problem']
