@@ -1,5 +1,4 @@
 
-import os
 import time
 import httpx 
 from base_epic import BaseEpic
@@ -11,7 +10,7 @@ class github_epic(BaseEpic):
         self.repo = repo
         self.token = token
         self.tasks = []  # Initialize empty tasks list
-    
+
     def create_issues(self):
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {
