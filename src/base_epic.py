@@ -7,17 +7,36 @@ class BaseEpic(ABC):
         self.feature = feature
         self.value = value
         self.tasks = []
-
     @abstractmethod
+    def start(self):
+        pass
+    
     def add_task(self, task):
-        pass
+        self.tasks.append(task)
 
-    @abstractmethod
     def remove_task(self, task_title):
+        self.tasks = [task for task in self.tasks if task["title"] != task_title]
+
+    def get_tasks(self):
+        return self.tasks
+    
+    def edit_task(self, task_title, new_data):
+        self.tasks = [new_data if task["title"] == task_title else task for task in self.tasks]
+
+    @abstractmethod
+    def create_issues(self):
         pass
 
     @abstractmethod
-    def get_tasks(self):
+    def get_issues(self):
+        pass
+
+    @abstractmethod
+    def delete_issue(self, title):
+        pass
+
+    @abstractmethod
+    def format_body(self, task):
         pass
 
     @abstractmethod
@@ -28,6 +47,4 @@ class BaseEpic(ABC):
     def save_json(self, file_path):
         pass
     
-    @abstractmethod
-    def edit_task(self, task_title, new_data):
-        pass
+    
