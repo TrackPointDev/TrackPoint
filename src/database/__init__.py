@@ -23,9 +23,15 @@ def initfirebase():
     version_id = "latest"
     cred = credentials.Certificate(access_secret_version_json(project_id, secret_id, version_id))
     
-    print(f"cred:", cred)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+    try:
+        # Try to get the default app
+        app = firebase_admin.get_app()
+    except ValueError:
+        # If the app does not exist, initialize it
+        app = firebase_admin.initialize_app(cred)
+
+    # Initialize Firestore client
+    db = firestore.client(app=app)
 
     return db
 
