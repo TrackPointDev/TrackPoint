@@ -33,7 +33,9 @@ def main():
         _github_epic.add_task(task)
     
     print(_github_epic.get_tasks())
-    _github_epic.create_github_issues()
+
+    #Outcommented to avoid creating issues
+    #_github_epic.create_github_issues()
 
 if __name__ == "__main__":
     main()

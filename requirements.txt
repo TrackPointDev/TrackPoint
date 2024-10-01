@@ -3,3 +3,4 @@ protobuf~=5.28.0
 google-auth-oauthlib~=1.2.1
 httpx~=0.27.2
 firebase-admin~=6.5.0
+google-cloud-secret-manager==2.20.2
