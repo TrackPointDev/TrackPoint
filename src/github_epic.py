@@ -5,39 +5,15 @@ import httpx
 from base_epic import BaseEpic
 
 class github_epic(BaseEpic):
-    def __init__(self, owner, repo, *args, **kwargs):
+    def __init__(self, owner, token, repo, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.owner = owner
         self.repo = repo
-        self.token = "ghp_1234567890"
+        self.token = token
         self.tasks = []  # Initialize empty tasks list
-
-
-    def add_task(self, task):
-        self.tasks.append(task)
-
-    def remove_task(self, task_title):
-        self.tasks = [task for task in self.tasks if task["title"] != task_title]
-
-    def get_tasks(self):
-        return self.tasks
-
-    def load_json(self, file_path):
-        # Mock JSON loading
-        pass
-
-    def save_json(self, file_path):
-        # Mock JSON saving
-        pass
-
-    def edit_task(self, task_title, new_data):
-        for task in self.tasks:
-            if task["title"] == task_title:
-                task.update(new_data)
-                return True
-        return False
     
-    def create_github_issues(self):
+    #TODO save URL from return
+    def create_issues(self):
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {
             "Accept": "application/vnd.github+json",
@@ -72,8 +48,17 @@ class github_epic(BaseEpic):
             f"**Comments:** {task.get('comments', 'No comments')}\n"
         )
         return body
+    
+    def start(self):
+        print("Start the GitHub Epic")
+    
+    def get_issues(self):
+        pass
 
-# TODO: Having all the parameters in the request be arguments to this function is a little cluttered. Consider
-#  having two arguments as dicts, one for the header and one for the data. This would make the function call
-#  cleaner and more readable. Then retrieve the relevant parameters from the dicts in the function body and
-#  pass it to the request.
+    def delete_issue(self, title):
+        pass
+
+    def load_json(self, file_path):
+        pass
+    def save_json(self, file_path):
+        pass    
