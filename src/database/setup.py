@@ -12,7 +12,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         return super().default(o)
 
-def setup_database(spreadsheet_id, db_collection, db_manager):
+def setup_database(spreadsheet_id, db_manager):
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.
         epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
@@ -37,7 +37,7 @@ def setup_database(spreadsheet_id, db_collection, db_manager):
         print(epic_json)
         print(task_json)
         
-        db_manager.add_to_db(db_collection, epic_data.title, epic_data, task_list)
+        db_manager.add_to_db(epic_data, task_list)
 
     except HttpError as err:
         print(err)
