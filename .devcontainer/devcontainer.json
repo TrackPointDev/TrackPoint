@@ -16,11 +16,8 @@
 		"WORKSPACEPATH": "${containerWorkspaceFolder:PYTHONPATH}"
 	},
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [5000, 5001],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "pip3 install --user -r requirements.txt",
@@ -47,8 +44,7 @@
 				"ms-vscode.remote-repositories",
 				"mhutchie.git-graph",
 				"GitHub.vscode-pull-request-github",
-				"eamodio.gitlens",
-				"philnash.ngrok-for-vscode"
+				"eamodio.gitlens"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/usr/local/bin/python"

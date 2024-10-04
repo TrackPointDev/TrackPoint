@@ -10,7 +10,10 @@ secret_id = "NGROK_AUTHTOKEN"  # Replace with your secret ID in Google Cloud
 version_id = "latest"  # Replace with the version number or use "latest"
 
 # Establish connectivity
-listener = ngrok.forward(5000, authtoken = access_secret_version(project_id, secret_id, version_id))
+listener = ngrok.forward(3000,  # Port to forward
+                         domain="native-koi-miserably.ngrok-free.app",  # Domain to use, I.E where we receive the webhook.
+                         authtoken = access_secret_version(project_id, secret_id, version_id)   # Auth token
+                         )
 print(f"NGROK authenticated! \nIngress established at {listener.url()}")
 
 # Keep the listener alive

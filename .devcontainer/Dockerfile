@@ -17,4 +17,5 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r /tmp/requirements.txt
 
-    
+# Expose port 5000
+EXPOSE 5000
