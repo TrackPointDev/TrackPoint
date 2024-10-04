@@ -29,6 +29,7 @@ httplib2==0.22.0
 httpx==0.27.2
 idna==3.10
 msgpack==1.1.0
+ngrok==1.4.0
 oauthlib==3.2.2
 proto-plus==1.24.0
 protobuf==5.28.2

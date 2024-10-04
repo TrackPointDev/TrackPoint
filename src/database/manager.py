@@ -2,6 +2,18 @@ import json
 from database import initfirebase
 
 def fetch_database(db_collection, db_document):
+    """
+    Fetches a document from a specified Firestore collection.
+    Args:
+        db_collection (str): The name of the Firestore collection.
+        db_document (str): The name of the document within the collection.
+    Returns:
+        dict: The document data as a dictionary if the document exists.
+        None: If the document does not exist or an error occurs.
+    Raises:
+        Exception: If an error occurs during the fetch operation, it will be caught and printed.
+    """
+
     db = initfirebase()
     try:
         doc_ref = db.collection(db_collection).document(db_document)

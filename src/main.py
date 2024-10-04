@@ -10,7 +10,7 @@ from github_epic import github_epic
 from secret_manager import access_secret_version
 
 spreadsheet_id = "1iC75ObLb5ZvJ4NedUmnA5O98XGVNYno0IeJYFg2DVZ8"     # ID of the current spreadsheet.
-db_collection = "kevintest"
+db_collection = "epics"
 db_document = "MVP for TrackPoint"
 owner = "TrackPointDev"
 repo = "TrackPointTest"

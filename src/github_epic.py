@@ -12,7 +12,7 @@ class github_epic(BaseEpic):
         self.token = token
         self.tasks = []  # Initialize empty tasks list
     
-    #TODO save URL from return
+    # TODO save URL from return
     def create_issues(self):
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {
