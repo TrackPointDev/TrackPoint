@@ -6,9 +6,11 @@ from firebase_admin import firestore
 from secret_manager import access_secret_version_json
 
 def initfirebase():
-    """Method to initialize the Firebase connection and create a database instance.
+    """
+    Method to initialize the Firebase connection and create a database instance.
 
-    See docs: firebase.google.com/docs/firestore/quickstart"""
+    See docs: firebase.google.com/docs/firestore/quickstart
+    """
 
     # With Google Secret Manager
     project_id = "trackpointdb"
