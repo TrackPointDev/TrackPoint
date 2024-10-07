@@ -10,5 +10,7 @@ from fastapi import FastAPI, Request
 app = FastAPI(title="TrackPointWebhook")
 
 @app.post("/webhook")
-def webhook():
-    return {"message": "Hello World!"}
+def webhook(request: Request):
+    request = request.json()
+    print(request)
+    return request
