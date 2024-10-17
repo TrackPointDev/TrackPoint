@@ -31,6 +31,7 @@ class DatabaseManager:
             print(f"An error occurred: {e}")
             return None
 
+    # Should match the format of a base epic object
     def add_to_db(self, epic_data, data):
         try:
             self.doc_ref.set({
