@@ -1,18 +1,16 @@
 
-import os
 import time
 import httpx 
 from base_epic import BaseEpic
 
 class github_epic(BaseEpic):
-    def __init__(self, owner, token, repo, *args, **kwargs):
+    def __init__(self, owner, repo, token, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.owner = owner
         self.repo = repo
         self.token = token
         self.tasks = []  # Initialize empty tasks list
-    
-    #TODO save URL from return
+
     def create_issues(self):
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues"
         headers = {
@@ -31,6 +29,8 @@ class github_epic(BaseEpic):
                 # Use if-else to handle HTTP response status codes
                 if response.status_code == 201:
                     print(f"Issue created successfully!\n Response: {response.text}\n")
+                    issue_id = response.json().get("number")
+                    task["issueID"] = issue_id
                 else:
                     print(f"Failed to create issue: \n{response.status_code}, {response.text}\n")
             except httpx.HTTPError as exc:

@@ -11,6 +11,15 @@ class BaseEpic(ABC):
     def start(self):
         pass
     
+    def get_epic(self):
+        return {
+            "title": self.title,
+            "problem": self.problem,
+            "feature": self.feature,
+            "value": self.value,
+            "tasks": self.tasks
+        }
+
     def add_task(self, task):
         self.tasks.append(task)
 
