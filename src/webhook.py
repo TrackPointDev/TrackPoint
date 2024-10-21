@@ -1,5 +1,6 @@
 import ngrok
 import time
+import re
 import os
 import json
 import uvicorn
@@ -7,7 +8,7 @@ from fastapi import FastAPI
 
 from database_epic import database_epic
 from secret_manager import access_secret_version
-from database.manager import fetch_database, update_db
+from database.manager import update_db, update_tasks
 from fastapi import Request
 
 db_collection = "epics"
@@ -23,7 +24,7 @@ async def read_webhook(request: Request) -> dict:
     print(json.dumps(payload, indent=4))
 
     database_epic_instance = database_epic(db_collection, db_document, "", "", "", "")
-    print(json.dumps(database_epic_instance, indent=4))
+    print(json.dumps(database_epic_instance.tasks, indent=4))
 
     if payload.get('action') == 'edited':
         changes = payload.get('changes', {})
@@ -32,15 +33,18 @@ async def read_webhook(request: Request) -> dict:
         update_data = {}
         for key in changes.keys():
             print(f"Change detected in: {key}")
-            if key in issue:
-                update_data[key] = issue[key]
+            from_value = changes[key].get('from', None)
+            print(f"Previous value: {from_value}")
+            db_value =  getattr(database_epic_instance.tasks, from_value, None)
+            new_value = issue.get(key, None)
+            if db_value != new_value:
+                update_data[key] = new_value 
         
-        print(database_epic_instance.tasks)
-
         #Update Firestore
         issue_title = issue.get('title')
         if update_data and issue_title:
-            update_db(db_collection, db_document, {str(issue_title): update_data})
+            print(f"Updating with title: {db_value}")
+            update_tasks(db_collection, db_document, str(from_value), update_data)
         
         return {"status": "success", "value updated:": update_data}
 

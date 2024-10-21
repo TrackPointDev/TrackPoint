@@ -38,9 +38,20 @@ def update_db(db_collection, db_document, updates):
         print(f"An error occurred: {e}")
         return None
 
-def update_tasks(db_collection, db_document, task):
+def update_tasks(db_collection, db_document, task_title, updated_task):
+    """
+    Updates a specific task in the 'tasks' list within a Firestore document.
+    Args:
+        db_collection (str): The name of the Firestore collection.
+        db_document (str): The name of the document within the collection.
+        task_title (str): The title of the task to be updated.
+        updated_task (dict): The updated task data.
+    Returns:
+        None
+    Raises:
+        Exception: If an error occurs during the update operation, it will be caught and printed.
+    """
     db = initfirebase()
-    
     try:
         doc_ref = db.collection(db_collection).document(db_document)
         doc = doc_ref.get()
@@ -50,15 +61,15 @@ def update_tasks(db_collection, db_document, task):
             tasks = data.get('tasks', [])
             
             for i, existing_task in enumerate(tasks):
-                if existing_task.get('title') == task.get('title'):
-                    tasks[i] = task
+                if existing_task.get('title') == task_title:
+                    tasks[i] = updated_task
                     break
             else:
-                print(f"Task with title {task.get('title')} not found.")
+                print(f"Task with title: '{task_title}' not found.")
                 return None
             
             doc_ref.update({'tasks': tasks})
-            print(f"Task {task.get('title')} updated successfully!")
+            print(f"Task {task_title} updated successfully!")
         else:
             print(f"No such document {db_document} in collection {db_collection}")
             return None

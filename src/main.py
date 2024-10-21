@@ -17,7 +17,7 @@ repo = "TrackPointTest"
 
 def main():
     # Run setup only once to initialize the database if needed.
-    # setup_database(spreadsheet_id, db_collection)
+    setup_database(spreadsheet_id, db_collection)
     data = fetch_database(db_collection, db_document)
     #print(data)
     tasks_with_title = [task for task in data['tasks'] if task.get('title')]
