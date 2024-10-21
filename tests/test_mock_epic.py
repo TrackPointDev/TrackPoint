@@ -1,7 +1,6 @@
 import unittest
 import logging
-from src.mock_epic import MockEpic
-
+from src.epics.mock_epic import MockEpic
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

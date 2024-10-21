@@ -1,4 +1,4 @@
-from epics.base_epic import BaseEpic
+from src.epics.base_epic import BaseEpic
 
 class MockEpic(BaseEpic):
     def start(self):

@@ -1,7 +1,7 @@
 
 import time
 import httpx 
-from epics.base_epic import BaseEpic
+from src.epics.base_epic import BaseEpic
 
 class github_epic(BaseEpic):
     def __init__(self, owner, repo, token, *args, **kwargs):
