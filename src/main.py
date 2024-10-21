@@ -12,18 +12,18 @@ class Config:
         self.owner = "TrackPointDev"
         self.repo = "TrackPointTest"
         self.project_id = "trackpointdb"
-        self.secret_id = "hamsterpants-github-pat"
-        self.version_id = "latest"
+        self.gh_secret_id = "hamsterpants-github-pat"
+        self.gh_version_id = "latest"
 
-def main():
-    config = Config()
+#TODO create a test for this
+def github_epic_test(config):
     db_manager = DatabaseManager(config.db_collection, config.db_document)
 
     setup_database(config.spreadsheet_id, db_manager)
-    
+
     epic = db_manager.fetch_database()
 
-    token = access_secret_version(config.project_id, config.secret_id, config.version_id)
+    token = access_secret_version(config.project_id, config.gh_secret_id, config.gh_version_id)
 
     gh_epic = github_epic(config.owner, config.repo, token, epic['title'], epic['problem'], epic['feature'], epic['value'])
     
@@ -54,6 +54,11 @@ def main():
     
 """     print("Deleting all issues")
     gh_epic.close_all_issues() """
+    
+def main():
+    config = Config()
+    github_epic_test(config)
+
 
 if __name__ == "__main__":
     main()
