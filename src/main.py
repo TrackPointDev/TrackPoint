@@ -8,7 +8,7 @@ class Config:
     def __init__(self):
         self.spreadsheet_id = "1o5JoaPwq7uP9oYs9KuhFBc9MJP6JybIhaLRUscgame8"
         self.db_collection = "kevintest"
-        self.db_document = "MVP for TrackPoint"
+        self.db_document = "hey123"
         self.owner = "TrackPointDev"
         self.repo = "TrackPointTest"
         self.project_id = "trackpointdb"
@@ -33,6 +33,9 @@ def main():
     print("Creating issues")
     gh_epic.create_issues()
 
+    print("Getting issues")
+    print(gh_epic.get_issues())
+
     print("Getting tasks")
     print(gh_epic.get_tasks())
 
@@ -48,6 +51,9 @@ def main():
     input("Press enter to continue")
     print("Deleting epic")
     db_manager.delete_epic()
+    
+"""     print("Deleting all issues")
+    gh_epic.close_all_issues() """
 
 if __name__ == "__main__":
     main()
