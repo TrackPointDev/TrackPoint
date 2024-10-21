@@ -1,6 +1,6 @@
 from database.setup import setup_database
 from database.manager import DatabaseManager
-from github_epic import github_epic
+from epics.github_epic import github_epic
 from secret_manager import access_secret_version
 
 #TODO create a config or env file for these
