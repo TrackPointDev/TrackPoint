@@ -4,6 +4,8 @@ import os
 import json
 import uvicorn
 from fastapi import FastAPI
+
+from database_epic import database_epic
 from secret_manager import access_secret_version
 from database.manager import fetch_database, update_db
 from fastapi import Request
@@ -20,6 +22,9 @@ async def read_webhook(request: Request) -> dict:
     payload = await request.json()
     print(json.dumps(payload, indent=4))
 
+    database_epic_instance = database_epic(db_collection, db_document, "", "", "", "")
+    print(json.dumps(database_epic_instance, indent=4))
+
     if payload.get('action') == 'edited':
         changes = payload.get('changes', {})
         issue = payload.get('issue', {})
@@ -30,19 +35,14 @@ async def read_webhook(request: Request) -> dict:
             if key in issue:
                 update_data[key] = issue[key]
         
+        print(database_epic_instance.tasks)
+
         #Update Firestore
         issue_title = issue.get('title')
-        data = fetch_database(db_collection, db_document)
         if update_data and issue_title:
             update_db(db_collection, db_document, {str(issue_title): update_data})
         
         return {"status": "success", "value updated:": update_data}
-        
-        
-        
-
-    
-
 
     return payload
 
