@@ -52,7 +52,7 @@ def parse_body(body: str) -> dict:
 @app.post("/")
 async def read_webhook(request: Request) -> dict:
     payload = await request.json()
-    print(json.dumps(payload, indent=4))
+    #print(json.dumps(payload, indent=4))
 
     database_epic_instance = database_epic(db_collection, db_document, "", "", "", "")
 
@@ -60,7 +60,6 @@ async def read_webhook(request: Request) -> dict:
         changes = payload.get('changes', {})
         issue = payload.get('issue', {})
 
-        test ={}
         update_data = Task(title=None, comments=None, issueID=None, priority=None, description=None, story_point=None)
 
         for key in changes.keys():
@@ -70,8 +69,6 @@ async def read_webhook(request: Request) -> dict:
             db_value = getattr(database_epic_instance.tasks, from_value, None)
             new_value = issue.get(key, None)
             if db_value != new_value:
-                test[key] = new_value
-                print("test:\n" + json.dumps(test, indent=4))
                 if key == 'body':
                     from_value = issue.get('title')
                     parsed_data = parse_body(new_value)
@@ -79,12 +76,10 @@ async def read_webhook(request: Request) -> dict:
                         setattr(update_data, attr, value)
                 else:
                     setattr(update_data, key, new_value)
-                print(json.dumps(update_data.__dict__, indent=4)) 
         
         #Update Firestore
         issue_title = issue.get('title')
         if update_data and issue_title:
-            print(f"Updating with title: {db_value}")
             update_tasks(db_collection, db_document, str(from_value), update_data.__dict__)
         
         return {"status": "success", "value updated:": update_data}
