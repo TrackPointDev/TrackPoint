@@ -2,19 +2,17 @@
 import json
 import dataclasses
 from googleapiclient.errors import HttpError
-from database import initfirebase
 from Google import sheets
 
-
 # Define a custom JSON encoder to handle dataclasses. Mostly just here so I could print the dataclasses as JSON
-# in the terminal.
+# in the terminal
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
 
-def setup_database(spreadsheet_id, db_collection):
+def setup_database(spreadsheet_id, db_manager):
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.
         epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
@@ -29,7 +27,8 @@ def setup_database(spreadsheet_id, db_collection):
         if epic_data:
             for task in tasks_sheet:
                 task_object = task.to_task()
-                task_list.append(task_object.__dict__)
+                if task_object.title != None:
+                    task_list.append(task_object.__dict__)
             epic_data.tasks = task_list
 
         # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
@@ -37,17 +36,8 @@ def setup_database(spreadsheet_id, db_collection):
         task_json = json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4)
         print(epic_json)
         print(task_json)
-
-        # Initialize the Firestore database and add the 'Epic' object to the database along with its tasks.
-        db = initfirebase()
-
-        doc_ref = db.collection(db_collection).document(epic_data.title)
-        doc_ref.set({"title": epic_data.title,
-                     "problem": epic_data.problem,
-                     "feature": epic_data.feature,
-                     "value": epic_data.value,
-                     "tasks": task_list})
-        print("Document successfully added to Firestore")
+        
+        db_manager.add_to_db(epic_data, task_list)
 
     except HttpError as err:
         print(err)
