@@ -60,11 +60,14 @@ def update_tasks(db_collection, db_document, task_title, updated_task):
             data = doc.to_dict()
             tasks = data.get('tasks', [])
             
-            for i, existing_task in enumerate(tasks):
-                if existing_task.get('title') == task_title:
-                    tasks[i] = updated_task
+            task_found = False
+            for task in tasks:
+                if task.get('title') == task_title:
+                    task.update({k: v for k, v in updated_task.items() if v is not None})
+                    task_found = True
                     break
-            else:
+            
+            if not task_found:
                 print(f"Task with title: '{task_title}' not found.")
                 return None
             

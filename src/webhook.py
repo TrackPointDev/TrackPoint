@@ -71,15 +71,15 @@ async def read_webhook(request: Request) -> dict:
             new_value = issue.get(key, None)
             if db_value != new_value:
                 test[key] = new_value
-                print(json.dumps(test, indent=4))
+                print("test:\n" + json.dumps(test, indent=4))
                 if key == 'body':
+                    from_value = issue.get('title')
                     parsed_data = parse_body(new_value)
                     for attr, value in parsed_data.items():
                         setattr(update_data, attr, value)
                 else:
                     setattr(update_data, key, new_value)
-                update_data_json = json.dumps(update_data.__dict__, indent=4)
-                print(update_data_json) 
+                print(json.dumps(update_data.__dict__, indent=4)) 
         
         #Update Firestore
         issue_title = issue.get('title')
@@ -106,8 +106,6 @@ def init_webhook():
     # Keep the listener alive
     try:
         uvicorn.run(app, host="0.0.0.0", port=5000)
-        while True:
-            time.sleep(1)
     except KeyboardInterrupt:
         print("Closing listener")
 
