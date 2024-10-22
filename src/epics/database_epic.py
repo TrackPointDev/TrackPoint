@@ -1,10 +1,9 @@
-from base_epic import BaseEpic
+from epics.base_epic import BaseEpic
 from database import manager
 
 class database_epic(BaseEpic):
     """
     Epic class representing a database epic. Inherits from BaseEpic.
-    
     """
     def __init__(self, collection, document, *args, **kwargs):
         super().__init__(*args, **kwargs)

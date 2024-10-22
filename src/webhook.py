@@ -7,9 +7,9 @@ import uvicorn
 from fastapi import FastAPI
 
 from Google.sheets import Task
-from database_epic import database_epic
+from epics.database_epic import database_epic
 from secret_manager import access_secret_version
-from database.manager import update_db, update_tasks
+from database.manager import DatabaseManager
 from fastapi import Request
 
 db_collection = "epics"
@@ -80,7 +80,7 @@ async def read_webhook(request: Request) -> dict:
         #Update Firestore
         issue_title = issue.get('title')
         if update_data and issue_title:
-            update_tasks(db_collection, db_document, str(from_value), update_data.__dict__)
+            DatabaseManager.update_tasks(db_collection, db_document, str(from_value), update_data.__dict__)
         
         return {"status": "success", "value updated:": update_data}
 
