@@ -52,7 +52,6 @@ def parse_body(body: str) -> dict:
 @app.post("/")
 async def read_webhook(request: Request) -> dict:
     payload = await request.json()
-    #print(json.dumps(payload, indent=4))
 
     database_epic_instance = database_epic(db_collection, db_document, "", "", "", "")
 

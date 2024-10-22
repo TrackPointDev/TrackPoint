@@ -1,5 +1,5 @@
 from epics.base_epic import BaseEpic
-from database import manager
+from database.manager import DatabaseManager
 
 class database_epic(BaseEpic):
     """
@@ -17,7 +17,8 @@ class database_epic(BaseEpic):
         If no document is found, raises an exception.
         """
         try:
-            data = manager.fetch_database()
+            DatabaseManager("epics", "MVP for TrackPoint")
+            data = DatabaseManager.fetch_database()
             self.title = data.get('title')
             self.value = data.get('value')
             self.problem = data.get('problem')
