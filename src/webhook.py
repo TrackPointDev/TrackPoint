@@ -4,16 +4,13 @@ import re
 import os
 import json
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 
 from Google.sheets import Task
 from epics.database_epic import database_epic
 from secret_manager import access_secret_version
 from database.manager import DatabaseManager
 from fastapi import Request
-
-# Initialize FastAPI application
-app = FastAPI()
 
 class Webhook:
     def __init__(self, db_collection, db_document, project_id, version_id, ngrok_secret_id):
@@ -22,7 +19,6 @@ class Webhook:
         self.project_id = project_id
         self.version_id = version_id
         self.ngrok_secret_id = ngrok_secret_id
-        self.init_webhook()
 
     def init_webhook(self):
         # Establish connectivity
@@ -32,16 +28,9 @@ class Webhook:
                                 )
         print(f"NGROK authenticated! \nIngress established at {listener.url()}")
 
-        # Keep the listener alive
-        try:
-            uvicorn.run(app, host="0.0.0.0", port=5000)
-        except KeyboardInterrupt:
-            print("Closing listener")
-    
     # Define the webhook endpoint
-    async def read_webhook(self, payload) -> dict:
+    async def webhook_update_db(self, payload) -> dict:
         payload = await payload
-        print(f"Received payload: {payload}")
 
         database_epic_instance = database_epic(self.db_collection, self.db_document, "", "", "", "")
 
