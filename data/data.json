@@ -1,0 +1,42 @@
+{
+    "epic1": {
+      "title": "Epic Title 1",
+      "problem": "Description of the problem for Epic 1",
+      "feature": "Solution or feature being developed for Epic 1",
+      "value": "Expected value or outcome for Epic 1",
+      "tasks": [
+        {
+          "title": "Task Title 1",
+          "priority": "High | Medium | Low",
+          "description": "Detailed task description for Task 1",
+          "storypoints": 3
+        },
+        {
+          "title": "Task Title 2",
+          "priority": "Medium",
+          "description": "Description of second task for Epic 1",
+          "storypoints": 5
+        }
+      ]
+    },
+    "epic2": {
+      "title": "Epic Title 2",
+      "problem": "Description of the problem for Epic 2",
+      "feature": "Solution or feature being developed for Epic 2",
+      "value": "Expected value or outcome for Epic 2",
+      "tasks": [
+        {
+          "title": "Task Title 3",
+          "priority": "Low",
+          "description": "Detailed task description for Task 3",
+          "storypoints": 2
+        },
+        {
+          "title": "Task Title 4",
+          "priority": "High",
+          "description": "Description of second task for Epic 2",
+          "storypoints": 8
+        }
+      ]
+    }
+  }
