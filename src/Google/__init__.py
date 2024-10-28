@@ -40,8 +40,8 @@ def authenticate_service():
                 credentials_json, scopes
             )
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
 
     cache["credentials"] = creds
 
