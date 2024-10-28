@@ -12,11 +12,69 @@ from secret_manager import access_secret_version
 from database.manager import DatabaseManager
 from fastapi import Request
 
-db_collection = "epics"
-db_document = "MVP for TrackPoint"
-
 # Initialize FastAPI application
 app = FastAPI()
+
+class Webhook:
+    def __init__(self, db_collection, db_document, project_id, version_id, ngrok_secret_id):
+        self.db_collection = db_collection
+        self.db_document = db_document
+        self.project_id = project_id
+        self.version_id = version_id
+        self.ngrok_secret_id = ngrok_secret_id
+        self.init_webhook()
+
+    def init_webhook(self):
+        # Establish connectivity
+        listener = ngrok.forward(5000,  # Port to forward
+                                domain="native-koi-miserably.ngrok-free.app",  # Domain to use, I.E where we receive the webhook.
+                                authtoken = access_secret_version(self.project_id, self.ngrok_secret_id, self.version_id)   # Auth token
+                                )
+        print(f"NGROK authenticated! \nIngress established at {listener.url()}")
+
+        # Keep the listener alive
+        try:
+            uvicorn.run(app, host="0.0.0.0", port=5000)
+        except KeyboardInterrupt:
+            print("Closing listener")
+    
+    # Define the webhook endpoint
+    async def read_webhook(self, payload) -> dict:
+        payload = await payload
+        print(f"Received payload: {payload}")
+
+        database_epic_instance = database_epic(self.db_collection, self.db_document, "", "", "", "")
+
+        if payload.get('action') == 'edited':
+            changes = payload.get('changes', {})
+            issue = payload.get('issue', {})
+
+            update_data = Task(title=None, comments=None, issueID=None, priority=None, description=None, story_point=None)
+
+            for key in changes.keys():
+                print(f"Change detected in: {key}")
+                from_value = changes[key].get('from', None)
+                print(f"Previous value: {from_value}")
+                db_value = getattr(database_epic_instance.tasks, from_value, None)
+                new_value = issue.get(key, None)
+                if db_value != new_value:
+                    if key == 'body':
+                        from_value = issue.get('title')
+                        parsed_data = parse_body(new_value)
+                        for attr, value in parsed_data.items():
+                            setattr(update_data, attr, value)
+                    else:
+                        setattr(update_data, key, new_value)
+            
+            #Update Firestore
+            issue_title = issue.get('title')
+            if update_data and issue_title:
+                DatabaseManager.update_tasks(self.db_collection, self.db_document, str(from_value), update_data.__dict__)
+            
+            return {"status": "success", "value updated:": update_data}
+
+        return payload
+
 
 def parse_body(body: str) -> dict:
     """Parse the body text and extract values for Task attributes."""
@@ -48,60 +106,7 @@ def parse_body(body: str) -> dict:
     
     return task_data
 
-# Define the webhook endpoint
-@app.post("/")
-async def read_webhook(request: Request) -> dict:
-    payload = await request.json()
 
-    database_epic_instance = database_epic(db_collection, db_document, "", "", "", "")
 
-    if payload.get('action') == 'edited':
-        changes = payload.get('changes', {})
-        issue = payload.get('issue', {})
 
-        update_data = Task(title=None, comments=None, issueID=None, priority=None, description=None, story_point=None)
-
-        for key in changes.keys():
-            print(f"Change detected in: {key}")
-            from_value = changes[key].get('from', None)
-            print(f"Previous value: {from_value}")
-            db_value = getattr(database_epic_instance.tasks, from_value, None)
-            new_value = issue.get(key, None)
-            if db_value != new_value:
-                if key == 'body':
-                    from_value = issue.get('title')
-                    parsed_data = parse_body(new_value)
-                    for attr, value in parsed_data.items():
-                        setattr(update_data, attr, value)
-                else:
-                    setattr(update_data, key, new_value)
-        
-        #Update Firestore
-        issue_title = issue.get('title')
-        if update_data and issue_title:
-            DatabaseManager.update_tasks(db_collection, db_document, str(from_value), update_data.__dict__)
-        
-        return {"status": "success", "value updated:": update_data}
-
-    return payload
-
-def init_webhook():
-    project_id = "trackpointdb" 
-    secret_id = "NGROK_AUTHTOKEN"  
-    version_id = "latest"  
-
-    # Establish connectivity
-    listener = ngrok.forward(5000,  # Port to forward
-                            domain="native-koi-miserably.ngrok-free.app",  # Domain to use, I.E where we receive the webhook.
-                            authtoken = access_secret_version(project_id, secret_id, version_id)   # Auth token
-                            )
-    print(f"NGROK authenticated! \nIngress established at {listener.url()}")
-
-    # Keep the listener alive
-    try:
-        uvicorn.run(app, host="0.0.0.0", port=5000)
-    except KeyboardInterrupt:
-        print("Closing listener")
-
-init_webhook()
 

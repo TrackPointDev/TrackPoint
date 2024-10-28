@@ -1,8 +1,17 @@
+import uvicorn
+
 from database.setup import setup_database
 from database.manager import DatabaseManager
 from epics.github_epic import github_epic
 from epics.ado_epic import ado_epic
 from secret_manager import access_secret_version
+from webhook import Webhook
+
+from fastapi import FastAPI, APIRouter
+from fastapi import Request
+
+# Initialize FastAPI application
+router = APIRouter()
 
 #TODO create a config or env file for these
 class Config:
@@ -15,11 +24,13 @@ class Config:
         self.project_id = "trackpointdb"
         self.gh_secret_id = "hamsterpants-github-pat"
         self.ado_secret_id = "az-devops-pat"
+        self.ngrok_secret_id = "NGROK_AUTHTOKEN"
         self.gh_version_id = "latest"
 
 #TODO create a test for this
 def github_epic_test(config):
     db_manager = DatabaseManager(config.db_collection, config.db_document)
+    #webhook_instance = Webhook(config.db_collection, config.db_document, config.project_id, config.gh_version_id, config.ngrok_secret_id)
 
     setup_database(config.spreadsheet_id, db_manager)
 
@@ -28,6 +39,7 @@ def github_epic_test(config):
     token = access_secret_version(config.project_id, config.gh_secret_id, config.gh_version_id)
 
     gh_epic = github_epic(config.owner, config.repo, token, epic['title'], epic['problem'], epic['feature'], epic['value'])
+    
     
     for task in epic['tasks']:
         gh_epic.add_task(task)
@@ -89,8 +101,8 @@ def ado_epic_test(config):
 def main():
     config = Config()
 
-    #github_epic_test(config)
-    ado_epic_test(config)
+    github_epic_test(config)
+    #ado_epic_test(config)
 
 
 if __name__ == "__main__":
