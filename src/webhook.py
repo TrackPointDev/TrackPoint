@@ -29,9 +29,7 @@ class Webhook:
         print(f"NGROK authenticated! \nIngress established at {listener.url()}")
 
     # Define the webhook endpoint
-    async def webhook_update_db(self, payload) -> dict:
-        payload = await payload
-
+    async def webhook_update_db(self, payload):
         database_epic_instance = database_epic(self.db_collection, self.db_document, "", "", "", "")
 
         if payload.get('action') == 'edited':
@@ -60,9 +58,7 @@ class Webhook:
             if update_data and issue_title:
                 DatabaseManager.update_tasks(self.db_collection, self.db_document, str(from_value), update_data.__dict__)
             
-            return {"status": "success", "value updated:": update_data}
 
-        return payload
 
 
 def parse_body(body: str) -> dict:

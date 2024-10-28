@@ -17,8 +17,8 @@ app = FastAPI()
 class Config:
     def __init__(self):
         self.spreadsheet_id = "1o5JoaPwq7uP9oYs9KuhFBc9MJP6JybIhaLRUscgame8"
-        self.db_collection = "kevintest"
-        self.db_document = "hey123"
+        self.db_collection = "epics"
+        self.db_document = "MVP for TrackPoint"
         self.owner = "TrackPointDev"
         self.repo = "TrackPointTest"
         self.project_id = "trackpointdb"
@@ -107,7 +107,7 @@ async def listener(request: Request = None):
 
     webhook_instance = Webhook(config.db_collection, config.db_document, config.project_id, config.gh_version_id, config.ngrok_secret_id)
 
-    webhook_instance.webhook_update_db(payload)
+    await webhook_instance.webhook_update_db(payload)
 
     return {"status": "success"}
 
@@ -122,7 +122,7 @@ def main():
     except KeyboardInterrupt:
         print("Closing listener")
 
-    github_epic_test(config)
+    #github_epic_test(config)
     #ado_epic_test(config)
 
 
