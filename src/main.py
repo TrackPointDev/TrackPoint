@@ -49,6 +49,14 @@ db = DatabaseManager(config.db_collection, config.db_document)
 
 @app.post("/tasks")
 async def create_task(task: Task):
+    """
+    Creates a new task in the Firestore database.
+
+    Args:
+        task (Task): The task to be created.
+    Returns:
+        dict: A dictionary containing the status and message of the operation.
+    """
     task_json = task.model_dump(mode='json')
     print(f"Received task: {task_json}")
 
@@ -60,39 +68,40 @@ async def create_task(task: Task):
     return {"status": 200, "message": "Task created successfully."}
 
 @app.get("/tasks")
-async def get_tasks(task: Annotated[int | str | None, Header()] = None):
+async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
     """
     Get a list of tasks or a single task based on the task_id.
     """
 
-    if task:
+    if taskID:
         # For some reason, headers are casted to strings even when an int is passed. This is a workaround.
-        if isinstance(task, str) and task.isdigit():
-            task = int(task)
+        if isinstance(taskID, str) and taskID.isdigit():
+            taskID = int(taskID)
         try:
-            if isinstance(task, int):
-                print(f"Fetching task with ID: {task}")
-                return db.get_task_with_id(task)
-            elif isinstance(task, str):
-                print(f"Fetching task with title: {task}")
-                return db.get_task_with_title(task)
+            return db.get_task(taskID)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
-
     try:
-        tasks_list = db.get_tasks_list()
+        return db.get_tasks_list()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
-    return tasks_list
 
-@app.put("/tasks/{task_id}")
-async def update_task(task_id: int, task: Task):
+@app.put("/tasks")
+async def update_task(taskID: Annotated[int | str | None, Header()], task: Task):
     # Update task based on source
     return {"message": "Task updated"}
 
-@app.delete("/tasks/{task_id}")
-async def delete_task(task_id: int):
+@app.delete("/tasks")
+async def delete_task(taskID: Annotated[int | str, Header()]):
     # Delete task logic here
+
+    if isinstance(taskID, str) and taskID.isdigit():
+        taskID = int(taskID)
+    try:
+        db.delete_task(taskID)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
     return {"message": "Task deleted"}
 
 @app.post("/")

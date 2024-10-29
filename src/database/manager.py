@@ -1,6 +1,6 @@
 from database import initfirebase
 from database.models import Task
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 #Maybe more of a document manager than a database manager but I'm not sure what to call it
 class DatabaseManager:
@@ -51,6 +51,38 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(e)
         
+    def get_task(self, task_identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
+        """
+        Fetch specific task from Firestore document based on the task_identifier.
+
+        Args:
+            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (task_id) or a string (task_title).
+        Returns:
+            dict: The task data as a dictionary if the task exists.
+            None: If the task does not exist or an error occurs.
+        Raises:
+            ValueError: If task_identifier is neither an integer nor a string.
+            Exception: If an error occurs during the fetch operation, it will be caught and printed.
+        """
+        if not isinstance(task_identifier, (int, str)):
+            raise ValueError("task_identifier must be an integer or a string")
+        
+        try:
+            doc = self.doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                tasks = data['tasks']
+                for task in tasks:
+                    if (isinstance(task_identifier, int) and task['issueID'] == task_identifier) or \
+                       (isinstance(task_identifier, str) and task['title'] == task_identifier):
+                        return task
+                return None
+            else:
+                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+        except Exception as e:  # Catch any exceptions
+            print(f"An error occurred: {e}")
+            return None
+        
     def get_tasks_list(self) -> List:
         """
         Retrieves entire list of 'tasks' from the Firestore document.
@@ -70,6 +102,34 @@ class DatabaseManager:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(e)
+        
+    def delete_task(self, task_identifier: Union[int, str]) -> None:
+        """
+        Deletes a specific task from the 'tasks' list within the Firestore document.
+        Args:
+            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (task_id) or a string (task_title).
+        Returns:
+            None
+        Raises:
+            ValueError: If task_identifier is neither an integer nor a string.
+            Exception: If an error occurs during the delete operation, it will be caught and printed.
+        """
+        if not isinstance(task_identifier, (int, str)):
+            raise ValueError("task_identifier must be an integer or a string")
+        
+        try:
+            doc = self.doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                tasks = data.get('tasks', [])
+                tasks = [task for task in tasks if not ((isinstance(task_identifier, int) and task['issueID'] == task_identifier) or 
+                                                        (isinstance(task_identifier, str) and task['title'] == task_identifier))]
+                self.doc_ref.update({'tasks': tasks})
+                print(f"Task with identifier '{task_identifier}' deleted successfully from document '{self.db_document}' in collection '{self.db_collection}'!")
+            else:
+                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def update_db(self, updates):
         try:
@@ -89,56 +149,6 @@ class DatabaseManager:
                 "tasks": data
             })
             print(f"Document '{self.db_document}' in collection '{self.db_collection}' added successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
-    
-    def get_task_with_id(self, task_id: int) -> Optional[Dict[str, Any]]:
-        """
-        Fetch specific task from Firestore document based on the task_id.
-
-        Args:
-            task_id (int): The unique identifier of the task.
-        Returns:
-            dict: The task data as a dictionary if the task exists.
-            None: If the task does not exist or an error occurs.
-        Raises:
-            ValueError: If task_id is not an integer.
-            Exception: If an error occurs during the fetch operation, it will be caught and printed.
-        """
-        if not isinstance(task_id, int):
-            raise ValueError("task_id must be an integer")
-        
-        try:
-            doc = self.doc_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
-                tasks = data['tasks']
-                for task in tasks:
-                    if task['issueID'] == task_id:
-                        return task
-                return None
-            else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
-    
-    def get_task_with_title(self, task_title: str) -> Optional[Dict[str, Any]]:
-        if not isinstance(task_title, str):
-            raise ValueError("task_title must be a string")
-        try:
-            doc = self.doc_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
-                tasks = data['tasks']
-                for task in tasks:
-                    if task['title'] == task_title:
-                        return task
-                return None
-            else:
-                print(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
-                return None
         except Exception as e:  # Catch any exceptions
             print(f"An error occurred: {e}")
             return None
