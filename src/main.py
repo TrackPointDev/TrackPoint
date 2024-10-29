@@ -18,7 +18,7 @@ class Config:
     def __init__(self):
         self.spreadsheet_id = "1o5JoaPwq7uP9oYs9KuhFBc9MJP6JybIhaLRUscgame8"
         self.db_collection = "epics"
-        self.db_document = "MVP for TrackPoint"
+        self.db_document = "showcase"
         self.owner = "TrackPointDev"
         self.repo = "TrackPointTest"
         self.project_id = "trackpointdb"
@@ -26,6 +26,30 @@ class Config:
         self.ado_secret_id = "az-devops-pat"
         self.ngrok_secret_id = "NGROK_AUTHTOKEN"
         self.gh_version_id = "latest"
+
+def initialize_webhook():
+    config = Config()
+    webhook_instance = Webhook(
+        config.db_collection, 
+        config.db_document, 
+        config.project_id, 
+        config.gh_version_id, 
+        config.ngrok_secret_id)
+    
+    webhook_instance.init_endpoint()
+
+    return webhook_instance
+
+webhook_instance = initialize_webhook()
+
+@app.post("/")
+async def listener(request: Request = None):
+    payload = await request.json()
+    print(f"Received payload: {payload}")
+
+    await webhook_instance.webhook_update_db(payload)
+
+    return {"status": 200, "message": "Webhook event processed successfully."}
 
 #TODO create a test for this
 def github_epic_test(config):
@@ -98,25 +122,7 @@ def ado_epic_test(config):
     print("Deleting epic")
     db_manager.delete_epic()
 
-@app.post("/")
-async def listener(request: Request = None):
-    payload = await request.json()
-    print(f"Received payload: {payload}")
-
-    config = Config()
-
-    webhook_instance = Webhook(config.db_collection, config.db_document, config.project_id, config.gh_version_id, config.ngrok_secret_id)
-
-    await webhook_instance.webhook_update_db(payload)
-
-    return {"status": "success"}
-
 def main():
-    config = Config()
-
-    webhook_instance = Webhook(config.db_collection, config.db_document, config.project_id, config.gh_version_id, config.ngrok_secret_id)
-    webhook_instance.init_webhook()
-
     try:
         uvicorn.run(app, host="0.0.0.0", port=5000)
     except KeyboardInterrupt:

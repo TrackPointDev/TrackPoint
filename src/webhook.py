@@ -19,8 +19,9 @@ class Webhook:
         self.project_id = project_id
         self.version_id = version_id
         self.ngrok_secret_id = ngrok_secret_id
+        self.init_endpoint()
 
-    def init_webhook(self):
+    def init_endpoint(self):
         # Establish connectivity
         listener = ngrok.forward(5000,  # Port to forward
                                 domain="native-koi-miserably.ngrok-free.app",  # Domain to use, I.E where we receive the webhook.
@@ -47,7 +48,7 @@ class Webhook:
                 if db_value != new_value:
                     if key == 'body':
                         from_value = issue.get('title')
-                        parsed_data = parse_body(new_value)
+                        parsed_data = self.parse_body(new_value)
                         for attr, value in parsed_data.items():
                             setattr(update_data, attr, value)
                     else:
@@ -58,38 +59,36 @@ class Webhook:
             if update_data and issue_title:
                 DatabaseManager.update_tasks(self.db_collection, self.db_document, str(from_value), update_data.__dict__)
             
+    @staticmethod
+    def parse_body(body: str) -> dict:
+        """Parse the body text and extract values for Task attributes."""
+        task_data = {
+            'description': None,
+            'priority': None,
+            'story_point': None,
+            'comments': None
+        }
 
-
-
-def parse_body(body: str) -> dict:
-    """Parse the body text and extract values for Task attributes."""
-    task_data = {
-        'description': None,
-        'priority': None,
-        'story_point': None,
-        'comments': None
-    }
-
-    body = body.replace('**', '')  # Escape markdown characters
-    
-    # Regular expressions to extract values
-    patterns = {
-        'description': r'Description:\s*(.*)',
-        'priority': r'Priority:\s*(.*)',
-        'story_point': r'Story Point:\s*(\d+)',
-        'comments': r'Comments:\s*(.*)'
-    }
-    
-    for key, pattern in patterns.items():
-        match = re.search(pattern, body)
-        if match:
-            value = match.group(1).strip()
-            if key == 'story_point':
-                task_data[key] = int(value)  # Convert story_point to int
-            else:
-                task_data[key] = value
-    
-    return task_data
+        body = body.replace('**', '')  # Escape markdown characters
+        
+        # Regular expressions to extract values
+        patterns = {
+            'description': r'Description:\s*(.*)',
+            'priority': r'Priority:\s*(.*)',
+            'story_point': r'Story Point:\s*(\d+)',
+            'comments': r'Comments:\s*(.*)'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, body)
+            if match:
+                value = match.group(1).strip()
+                if key == 'story_point':
+                    task_data[key] = int(value)  # Convert story_point to int
+                else:
+                    task_data[key] = value
+        
+        return task_data
 
 
 
