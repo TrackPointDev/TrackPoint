@@ -51,6 +51,44 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(e)
         
+    def update_task(self, task_identifier, updated_task):
+        """
+        Updates a specific task in the 'tasks' list within a Firestore document.
+        Args:
+            task_identifier (int or str): The title/ID of the task to be updated.
+            updated_task (dict): The updated task data.
+        Returns:
+            None
+        Raises:
+            Exception: If an error occurs during the update operation, it will be caught and printed.
+        """
+        try:
+            doc = self.doc_ref.get()
+            
+            if doc.exists:
+                data = doc.to_dict()
+                tasks = data.get('tasks', [])
+                
+                task_found = False
+
+                for task in tasks:
+                    if (isinstance(task_identifier, int) and task.get('issueID') == task_identifier) or \
+                        (isinstance(task_identifier, str) and task.get('title') == task_identifier):
+                        task.update({k: v for k, v in updated_task.items() if v is not None})
+                        task_found = True
+                        break
+                
+                if not task_found:
+                    print(f"Task with title: '{task_identifier}' not found.")
+                    return None
+                
+                self.doc_ref.update({'tasks': tasks})
+                print(f"Task '{task_identifier}' updated successfully!")
+            else:
+                raise Exception("No such document '{self.db_document}' in collection '{self.db_collection}'")
+        except Exception as e:
+            raise Exception(f"Error with writing to Google Cloud: {e}")
+        
     def get_task(self, task_identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
         """
         Fetch specific task from Firestore document based on the task_identifier.
@@ -161,42 +199,4 @@ class DatabaseManager:
             print(f"An error occurred: {e}")
             return None
     
-    def update_task(self, task_identifier, updated_task):
-        """
-        Updates a specific task in the 'tasks' list within a Firestore document.
-        Args:
-            db_collection (str): The name of the Firestore collection.
-            db_document (str): The name of the document within the collection.
-            task_identifier (str): The title of the task to be updated.
-            updated_task (dict): The updated task data.
-        Returns:
-            None
-        Raises:
-            Exception: If an error occurs during the update operation, it will be caught and printed.
-        """
-        try:
-            doc = self.doc_ref.get()
-            
-            if doc.exists:
-                data = doc.to_dict()
-                tasks = data.get('tasks', [])
-                
-                task_found = False
-
-                for task in tasks:
-                    if (isinstance(task_identifier, int) and task.get('issueID') == task_identifier) or \
-                        (isinstance(task_identifier, str) and task.get('title') == task_identifier):
-                        task.update({k: v for k, v in updated_task.items() if v is not None})
-                        task_found = True
-                        break
-                
-                if not task_found:
-                    print(f"Task with title: '{task_identifier}' not found.")
-                    return None
-                
-                self.doc_ref.update({'tasks': tasks})
-                print(f"Task '{task_identifier}' updated successfully!")
-            else:
-                raise Exception("No such document '{self.db_document}' in collection '{self.db_collection}'")
-        except Exception as e:
-            raise Exception(f"Error with writing to Google Cloud: {e}")
+    
