@@ -62,7 +62,7 @@ class Webhook:
         # Update Firestore
         issue_title = issue.get('title')
         if update_data and issue_title:
-            DatabaseManager.update_tasks(self.db_collection, self.db_document, str(from_value), update_data.__dict__)
+            DatabaseManager.update_task(self.db_collection, self.db_document, str(from_value), update_data.__dict__)
             
     @staticmethod
     def parse_body(body: str) -> dict:
