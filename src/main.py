@@ -1,3 +1,4 @@
+import os
 import uvicorn
 
 from database.setup import setup_database
@@ -152,7 +153,7 @@ async def listener(request: Request = None):
 
 def main():
     try:
-        uvicorn.run(app, host="0.0.0.0", port=5000)
+        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
     except KeyboardInterrupt:
         print("Closing listener")
 
