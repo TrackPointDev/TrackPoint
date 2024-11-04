@@ -45,7 +45,7 @@ def initialize_webhook():
         config.ngrok_secret_id)
     return webhook_instance
 
-webhook_instance = initialize_webhook()
+#webhook_instance = initialize_webhook()
 db = DatabaseManager(config.db_collection, config.db_document)
 
 @app.post("/tasks")
@@ -71,7 +71,7 @@ async def create_task(task: Task):
 @app.get("/tasks")
 async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
     """
-    Get either a specific task or the entire list of tasks the Firestore database.
+    Get either a specific task or the entire list of tasks from the Firestore database.
 
     Args:
         taskID (int or str): Optional ID for the task to be retrieved. If none is provided, all tasks will be returned.
@@ -146,7 +146,7 @@ async def listener(request: Request = None):
     payload = await request.json()
     print(f"Received payload: {payload}")
 
-    await webhook_instance.webhook_update_db(payload)
+    #await webhook_instance.webhook_update_db(payload)
 
     return {"status": 200, "message": "Webhook event processed successfully."}
 
