@@ -1,6 +1,7 @@
 from database import initfirebase
 from database.models import Task
 from typing import Optional, Dict, Any, List, Union
+import re
 
 #Maybe more of a document manager than a database manager but I'm not sure what to call it
 class DatabaseManager:
@@ -199,4 +200,34 @@ class DatabaseManager:
             print(f"An error occurred: {e}")
             return None
     
+    @staticmethod
+    def parse_body(body: str) -> dict:
+        """Parse the body text and extract values for Task attributes."""
+        task_data = {
+            'description': None,
+            'priority': None,
+            'story_point': None,
+            'comments': None
+        }
+
+        body = body.replace('**', '')  # Escape markdown characters
+        
+        # Regular expressions to extract values
+        patterns = {
+            'description': r'Description:\s*(.*)',
+            'priority': r'Priority:\s*(.*)',
+            'story_point': r'Story Point:\s*(\d+)',
+            'comments': r'Comments:\s*(.*)'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, body)
+            if match:
+                value = match.group(1).strip()
+                if key == 'story_point':
+                    task_data[key] = int(value)  # Convert story_point to int
+                else:
+                    task_data[key] = value
+        
+        return task_data
     
