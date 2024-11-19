@@ -1,6 +1,7 @@
 from database import initfirebase
-from database.models import Task
+from database.models import Epic, Task
 from typing import Optional, Dict, Any, List, Union
+from fastapi import HTTPException
 
 #Maybe more of a document manager than a database manager but I'm not sure what to call it
 class DatabaseManager:
@@ -168,35 +169,54 @@ class DatabaseManager:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             print(f"An error occurred: {e}")
-
-    def update_db(self, updates):
-        try:
-            self.doc_ref.update(updates)
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' updated successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
     
-    # Should match the format of a base epic object
-    def add_to_db(self, epic_data, data):
+    
+    def create_epic(self, epic: dict) -> None:
         try:
-            self.doc_ref.set({
-                "title": epic_data.title,
-                "problem": epic_data.problem,
-                "feature": epic_data.feature,
-                "value": epic_data.value,
-                "tasks": data
-            })
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' added successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
+            self.db.collection(self.db_collection).document(epic["title"]).set(epic)
+            print(f"Document '{epic["title"]}' in collection '{self.db_collection}' added successfully!")
+        except Exception as e:  
+            raise Exception(e)
 
-    def delete_epic(self) -> None:
+    def delete_epic(self, epic_title) -> None:
         try:
-            self.doc_ref.delete()
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' deleted successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
+            docs = self.db.collection(self.db_collection).stream()
+
+            for doc in docs:
+                if doc.id == epic_title:
+                    doc.reference.delete()
+                    print(f"Document '{epic_title}' in collection '{self.db_collection}' deleted successfully!")
+            raise HTTPException(404, 
+                                f"No such document '{epic_title}' in collection '{self.db_collection}'")
+        except Exception as e:  
+            raise Exception(e)
+        
+    def get_epic(self, epic_title) -> Optional[Dict[str, Any]]:
+        try:
+            doc = self.db.collection(self.db_collection).document(epic_title).get()
+            if doc.exists:
+                return doc.to_dict()
+            else:
+                raise HTTPException(404, 
+                                    f"No such document '{epic_title}' in collection '{self.db_collection}'")
+        except Exception as e:  
+            raise Exception(e)
+    
+    def get_all_epics(self) -> List:
+        try:
+            docs = self.db.collection(self.db_collection).stream()
+            epics = []
+            for doc in docs:
+                epics.append(doc.id)
+            return epics
+        except Exception as e:  
+            raise Exception(e)
+        
+    def update_epic(self, epic_title, epic_data):
+        try:
+            self.db.collection(self.db_collection).document(epic_title).update(epic_data)
+            print(f"Document '{epic_title}' in collection '{self.db_collection}' updated successfully!")
+        except Exception as e:  
+            raise Exception(e)
     
     

@@ -14,7 +14,8 @@
 	"containerEnv": {
 		"GOOGLE_CLOUD_PROJECT": "trackpointdb",
 		"CLOUD_RUN_SERVICE": "trackpointapi",
-		"WORKSPACEPATH": "${containerWorkspaceFolder:/workspaces}"
+		"WORKSPACEPATH": "${containerWorkspaceFolder:/workspaces}",
+		"PYTHONPATH": "/workspaces/TrackPoint/src"
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
