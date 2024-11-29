@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /src/Google/credentials.json
 /src/Google/token.json
 
@@ -13,8 +12,7 @@
 src/Google/__pycache__/__init__.cpython-312.pyc
 src/Google/__pycache__/sheets.cpython-312.pyc
 src/database/__pycache__/__init__.cpython-312.pyc
-token.json
-=======
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -77,4 +75,3 @@ db.sqlite3
 *.log
 local_settings.py
 media/
->>>>>>> 5-design-abstract-layer-to-handletransform-data

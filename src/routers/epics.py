@@ -46,7 +46,8 @@ async def get_epics(epicTitle: Annotated[str | None, Header()] = None):
     """
     if epicTitle:
         try:
-            return db.get_epic(epicTitle)
+            epic = db.get_epic(epicTitle)
+            return epic if epic else {"status": 404, "message": "Epic not found."}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
     try:

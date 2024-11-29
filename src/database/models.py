@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Union, List
 
 class Task(BaseModel):
-    title: str = Field(..., description="The title of the task.")
+    title: Optional[str] = Field(..., description="The title of the task.")
     comments: Optional[str] = Field(None, description="Comments on the task.")
     description: Optional[str] = Field(..., description="A description of the task.")
     issueID: Optional[int] = Field(None, description="The issue ID associated with the task.")

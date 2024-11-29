@@ -7,6 +7,7 @@ from database.manager import DatabaseManager
 from database.setup import setup_database
 from webhook import Webhook
 from routers import epics, tasks
+from Google import sheets
 
 
 tags_metadata = [
@@ -61,13 +62,26 @@ async def listener(request: Request = None):
     payload = await request.json()
     print(f"Received payload: {payload}")
 
-    return {"status": 200, "message": "Webhook event processed successfully."}
+    db = DatabaseManager(config.db_collection, config.db_document)
+
+    spreadsheet_id = payload.get("spreadsheetId")
+
+    sheet_epic = db.parse_sheet(spreadsheet_id)
+
+    print(f"Spreadsheet ID: {spreadsheet_id}")
+
+    if db.get_epic(sheet_epic.title) is None:
+        db.create_epic(sheet_epic.model_dump(mode='json'))
+    else:
+        db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
+        
+    return {"status": 200, "message": "DB updated Succesfully"}
 
 
 def main():
     try:
         uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-        setup_database(config.spreadsheet_id, db)
+        #setup_database(config.spreadsheet_id, db)
     except KeyboardInterrupt:
         print("Closing listener")
 

@@ -15,7 +15,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         return super().default(o)
 
-def setup_database(spreadsheet_id: str, db: DatabaseManager):
+def setup_database(spreadsheet_id: str, db: DatabaseManager, updatedb: bool = False):
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.
         epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
@@ -35,10 +35,12 @@ def setup_database(spreadsheet_id: str, db: DatabaseManager):
             epic_data.tasks = task_list
 
         # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
-        print(json.dumps(epic_data, cls=EnhancedJSONEncoder, indent=4))
-        print(json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4))
+        print(epic_data.model_dump(mode='json'))
         
-        db.create_epic(epic_data.model_dump(mode='json'))
-
+        if updatedb:
+            # Add the 'Epic' and 'Tasks' data to the Firestore database.
+            db.create_epic(epic_data.model_dump(mode='json'))
+        else:
+            return epic_data
     except HttpError as err:
         print(err)
