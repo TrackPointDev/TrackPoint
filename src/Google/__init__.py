@@ -20,9 +20,6 @@ def authenticate_service():
     """Authenticate the service account with Google Sheets API.
     See docs: https://developers.google.com/sheets/api/quickstart/python"""
 
-    if "credentials" in cache:
-        return cache["credentials"]
-
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets.readonly"
     ]
@@ -42,7 +39,5 @@ def authenticate_service():
             creds = flow.run_local_server(port=0)
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
-
-    cache["credentials"] = creds
 
     return creds

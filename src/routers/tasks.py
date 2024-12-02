@@ -1,22 +1,19 @@
-from database.setup import setup_database
+from typing import Annotated, Union
+from fastapi import APIRouter, HTTPException, Header
+
 from database.manager import DatabaseManager
 from database.models import Task
-from secret_manager import access_secret_version
-from webhook import Webhook
 
-from typing import Annotated, Union
-
-from fastapi import FastAPI, APIRouter, HTTPException, Header
-from fastapi import Request
-from src import db
 
 router = APIRouter(
-    prefix="/tasks",
-    tags=["tasks"],
+    prefix="/epics/tasks",
+    tags=["Tasks"],
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/tasks")
+db = DatabaseManager("epics", "showcase")
+
+@router.post("")
 async def create_task(task: Task):
     """
     Creates a new task in the Firestore database.
@@ -36,10 +33,10 @@ async def create_task(task: Task):
 
     return {"status": 200, "message": "Task created successfully."}
 
-@router.get("/tasks")
+@router.get("")
 async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
     """
-    Get either a specific task or the entire list of tasks the Firestore database.
+    Get either a specific task or the entire list of tasks in the Firestore database.
 
     Args:
         taskID (int or str): Optional ID for the task to be retrieved. If none is provided, all tasks will be returned.
@@ -62,14 +59,14 @@ async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Uni
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
-@router.put("/tasks")
+@router.put("")
 async def update_task(taskID: Annotated[int | str | None, Header()], task: Task):
     """
     Updates a given task in the Firestore database.
 
     Args:
         taskID (int or str): The task to be updated. Can be either the taskID (int) or the task title (str).
-        task (Task): The task to be created.
+        task (Task): Entire new Task object containing the new values. Current implementation does not support partial updates.
     Returns:
         dict: A dictionary containing the status and message of the operation.
     Raises:
@@ -87,7 +84,7 @@ async def update_task(taskID: Annotated[int | str | None, Header()], task: Task)
 
     return {"message": "Task updated"}
 
-@router.delete("/")
+@router.delete("")
 async def delete_task(taskID: Annotated[int | str, Header()]):
     """
     Delete a specific task in the Firestore database.

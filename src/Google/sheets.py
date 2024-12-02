@@ -7,30 +7,9 @@ from typing import Dict, List, Union, Optional
 from googleapiclient.discovery import build
 
 from Google import authenticate_service
+from database.models import Task, Epic
 
 cache = {}
-
-
-@dataclass
-class Task:
-    """Dataclass representing a task in a Google Sheet spreadsheet (I.e a row)"""
-    title: Optional[str]
-    comments: Optional[str]
-    issueID: Optional[str]
-    priority: Optional[str]
-    description: Optional[str]
-    story_point: Optional[int]
-
-
-@dataclass
-class Epic:
-    """Dataclass representing an epic in a Google Sheet spreadsheet"""
-    title: Optional[str]
-    problem: Optional[str]
-    feature: Optional[str]
-    value: Optional[str]
-    tasks: List[Task]
-
 
 @dataclass
 class Row:

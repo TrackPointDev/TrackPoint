@@ -4,6 +4,9 @@ import dataclasses
 from googleapiclient.errors import HttpError
 from Google import sheets
 
+from database.models import Epic, Task
+from database.manager import DatabaseManager
+
 # Define a custom JSON encoder to handle dataclasses. Mostly just here so I could print the dataclasses as JSON
 # in the terminal
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -12,7 +15,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         return super().default(o)
 
-def setup_database(spreadsheet_id, db_manager):
+def setup_database(spreadsheet_id: str, db: DatabaseManager, updatedb: bool = False):
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.
         epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
@@ -32,12 +35,12 @@ def setup_database(spreadsheet_id, db_manager):
             epic_data.tasks = task_list
 
         # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
-        epic_json = json.dumps(epic_data, cls=EnhancedJSONEncoder, indent=4)
-        task_json = json.dumps(task_list, cls=EnhancedJSONEncoder, indent=4)
-        print(epic_json)
-        print(task_json)
+        print(epic_data.model_dump(mode='json'))
         
-        db_manager.add_to_db(epic_data, task_list)
-
+        if updatedb:
+            # Add the 'Epic' and 'Tasks' data to the Firestore database.
+            db.create_epic(epic_data.model_dump(mode='json'))
+        else:
+            return epic_data
     except HttpError as err:
         print(err)

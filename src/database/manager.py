@@ -1,7 +1,8 @@
 from database import initfirebase
-from database.models import Task
+from database.models import Epic, Task
 from typing import Optional, Dict, Any, List, Union
-import re
+from fastapi import HTTPException
+from Google import sheets
 
 #Maybe more of a document manager than a database manager but I'm not sure what to call it
 class DatabaseManager:
@@ -169,65 +170,81 @@ class DatabaseManager:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             print(f"An error occurred: {e}")
-
-    def update_db(self, updates):
-        try:
-            self.doc_ref.update(updates)
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' updated successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
     
-    # Should match the format of a base epic object
-    def add_to_db(self, epic_data, data):
+    def create_epic(self, epic: dict) -> None:
         try:
-            self.doc_ref.set({
-                "title": epic_data.title,
-                "problem": epic_data.problem,
-                "feature": epic_data.feature,
-                "value": epic_data.value,
-                "tasks": data
-            })
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' added successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
+            self.db.collection(self.db_collection).document(epic["title"]).set(epic)
+            print(f"Document '{epic["title"]}' in collection '{self.db_collection}' added successfully!")
+        except Exception as e:  
+            raise Exception(e)
 
-    def delete_epic(self) -> None:
+    def delete_epic(self, epic_title) -> None:
         try:
-            self.doc_ref.delete()
-            print(f"Document '{self.db_document}' in collection '{self.db_collection}' deleted successfully!")
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
-    
-    @staticmethod
-    def parse_body(body: str) -> dict:
-        """Parse the body text and extract values for Task attributes."""
-        task_data = {
-            'description': None,
-            'priority': None,
-            'story_point': None,
-            'comments': None
-        }
+            docs = self.db.collection(self.db_collection).stream()
 
-        body = body.replace('**', '')  # Escape markdown characters
+            for doc in docs:
+                if doc.id == epic_title:
+                    doc.reference.delete()
+                    print(f"Document '{epic_title}' in collection '{self.db_collection}' deleted successfully!")
+            raise HTTPException(404, 
+                                f"No such document '{epic_title}' in collection '{self.db_collection}'")
+        except Exception as e:  
+            raise Exception(e)
         
-        # Regular expressions to extract values
-        patterns = {
-            'description': r'Description:\s*(.*)',
-            'priority': r'Priority:\s*(.*)',
-            'story_point': r'Story Point:\s*(\d+)',
-            'comments': r'Comments:\s*(.*)'
-        }
-        
-        for key, pattern in patterns.items():
-            match = re.search(pattern, body)
-            if match:
-                value = match.group(1).strip()
-                if key == 'story_point':
-                    task_data[key] = int(value)  # Convert story_point to int
-                else:
-                    task_data[key] = value
-        
-        return task_data
+    def get_epic(self, epic_title):
+        try:
+            doc = self.db.collection(self.db_collection).document(epic_title).get()
+            if doc.exists:
+                return doc.to_dict()
+            else:
+                return None
+        except Exception as e:  
+            raise Exception(e)
     
+    def get_all_epics(self) -> List:
+        try:
+            docs = self.db.collection(self.db_collection).stream()
+            epics = []
+            for doc in docs:
+                epics.append(doc.id)
+            return epics
+        except Exception as e:  
+            raise Exception(e)
+        
+    def update_epic(self, epic_title, epic_data):
+        try:
+            self.db.collection(self.db_collection).document(epic_title).update(epic_data)
+            print(f"Document '{epic_title}' in collection '{self.db_collection}' updated successfully!")
+        except Exception as e:  
+            raise Exception(e)
+    
+    def parse_sheet(self, spreadsheet_id: str) -> Epic:
+        """
+        Parses a Google Sheet into an Epic object.
+        Args:
+            sheet (dict): The Google Sheet data to be parsed.
+        Returns:
+            Epic: The parsed Epic object.
+        """
+
+        # Retrieve data from 'Epic' and 'Tasks' sheets.
+        epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
+        tasks_sheet = sheets.get_sheet("Tasks", spreadsheet_id)
+
+        task_list = []
+
+        # Transform the data from the 'Epic' sheet into an 'Epic' object.
+        epic_data = sheets.transform_to_epics(epic_sheet)
+
+        # Transform the data from the 'Tasks' sheet into a list of 'Task' objects.
+        if epic_data:
+            for task in tasks_sheet:
+                task_object = task.to_task()
+                if task_object.title != None:
+                    task_list.append(task_object.__dict__)
+            epic_data.tasks = task_list
+
+        # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
+        print(epic_data.model_dump(mode='json'))
+
+        return epic_data
