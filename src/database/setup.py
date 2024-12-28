@@ -15,6 +15,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         return super().default(o)
 
+# DEPRECATED
 def setup_database(spreadsheet_id: str, db: DatabaseManager, updatedb: bool = False):
     try:
         # Retrieve data from 'Epic' and 'Tasks' sheets.

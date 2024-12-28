@@ -5,7 +5,6 @@ from fastapi import Request
 
 from database.manager import DatabaseManager
 from database.setup import setup_database
-from webhook import Webhook
 from routers import epics, tasks
 from Google import sheets
 
@@ -39,24 +38,11 @@ class Config:
         self.ngrok_secret_id = "NGROK_AUTHTOKEN"
         self.gh_version_id = "latest"
 
-def initialize_webhook():
-    """
-    Method to initialize a Webhook instance. Should be deprecated once back-end api is hosted on a cloud platform.
-    """
-    
-    webhook_instance = Webhook(
-        config.db_collection, 
-        config.db_document, 
-        config.project_id, 
-        config.gh_version_id, 
-        config.ngrok_secret_id)
-    return webhook_instance
 
 config = Config()
-initialize_webhook()
 db = DatabaseManager(config.db_collection, config.db_document)
 
-
+#TODO: For some reason, the DB only gets updated in the first run. Subsequent runs do not update the DB. Fix this.
 @app.post("/")
 async def listener(request: Request = None):
     payload = await request.json()
@@ -66,11 +52,13 @@ async def listener(request: Request = None):
 
     spreadsheet_id = payload.get("spreadsheetId")
 
+    print(f"Parsing epic from spreadsheet: {spreadsheet_id}")
+
     sheet_epic = db.parse_sheet(spreadsheet_id)
+    print(f"Sheet epic: {sheet_epic}")
 
-    print(f"Spreadsheet ID: {spreadsheet_id}")
-
-    if db.get_epic(sheet_epic.title) is None:
+    existing_epic = db.get_epic(sheet_epic.title)
+    if existing_epic is None:
         db.create_epic(sheet_epic.model_dump(mode='json'))
     else:
         db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))

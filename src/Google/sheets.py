@@ -217,8 +217,7 @@ def get_sheet(
     sheet name and ID will return the same Sheet object.
     """
     sheet_key = f"{spreadsheet_id}_{sheet_name}"
-    if cached and sheet_key in cache:
-        return cache[sheet_key]
+    
 
     sheets_api = get_sheets_api()
 
@@ -230,7 +229,6 @@ def get_sheet(
     headers, rows = all_rows[0], all_rows[1:]
     sheet = Sheet(headers, rows)
 
-    cache[sheet_key] = sheet
     return sheet
 
 

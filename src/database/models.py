@@ -15,3 +15,4 @@ class Epic(BaseModel):
     feature: Optional[str] = Field(None, description="The feature statement of the epic.")
     value: Optional[str] = Field(..., description="The value statement of the epic.")
     tasks: Optional[List[Task]] = Field(..., description="A list of tasks associated with the epic.")
+    
