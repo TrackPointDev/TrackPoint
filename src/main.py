@@ -1,17 +1,28 @@
+import os
 import uvicorn
-
-from database.setup import setup_database
-from database.manager import DatabaseManager
-from epics.github_epic import github_epic
-from epics.ado_epic import ado_epic
-from secret_manager import access_secret_version
-from webhook import Webhook
-
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from fastapi import Request
 
+from database.manager import DatabaseManager
+from database.setup import setup_database
+from routers import epics, tasks
+from Google import sheets
+
+
+tags_metadata = [
+    {"name": "Users", "description": "Operations pertaining to users. The **login** logic is also here."},
+    {"name": "Epics", "description": "Management of epics."},
+    {"name": "Tasks", "description": "Management of tasks within epics."}
+]
+
+
 # Initialize FastAPI application
-app = FastAPI()
+app = FastAPI(title="TrackPoint-Backend", 
+              description="API for TrackPoint's backend.",
+              openapi_tags=tags_metadata)
+app.include_router(epics.router)
+app.include_router(tasks.router)
+
 
 #TODO create a config or env file for these
 class Config:
@@ -27,109 +38,40 @@ class Config:
         self.ngrok_secret_id = "NGROK_AUTHTOKEN"
         self.gh_version_id = "latest"
 
-def initialize_webhook():
-    config = Config()
-    webhook_instance = Webhook(
-        config.db_collection, 
-        config.db_document, 
-        config.project_id, 
-        config.gh_version_id, 
-        config.ngrok_secret_id)
-    
-    webhook_instance.init_endpoint()
 
-    return webhook_instance
+config = Config()
+db = DatabaseManager(config.db_collection, config.db_document)
 
-webhook_instance = initialize_webhook()
-
+#TODO: For some reason, the DB only gets updated in the first run. Subsequent runs do not update the DB. Fix this.
 @app.post("/")
 async def listener(request: Request = None):
     payload = await request.json()
     print(f"Received payload: {payload}")
 
-    await webhook_instance.webhook_update_db(payload)
+    db = DatabaseManager(config.db_collection, config.db_document)
 
-    return {"status": 200, "message": "Webhook event processed successfully."}
+    spreadsheet_id = payload.get("spreadsheetId")
 
-#TODO create a test for this
-def github_epic_test(config):
-    db_manager = DatabaseManager(config.db_collection, config.db_document)
+    print(f"Parsing epic from spreadsheet: {spreadsheet_id}")
 
-    setup_database(config.spreadsheet_id, db_manager)
+    sheet_epic = db.parse_sheet(spreadsheet_id)
+    print(f"Sheet epic: {sheet_epic}")
 
-    epic = db_manager.fetch_database()
+    existing_epic = db.get_epic(sheet_epic.title)
+    if existing_epic is None:
+        db.create_epic(sheet_epic.model_dump(mode='json'))
+    else:
+        db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
+        
+    return {"status": 200, "message": "DB updated Succesfully"}
 
-    token = access_secret_version(config.project_id, config.gh_secret_id, config.gh_version_id)
-
-    gh_epic = github_epic(config.owner, config.repo, token, epic['title'], epic['problem'], epic['feature'], epic['value'])
-    
-    """
-    for task in epic['tasks']:
-        gh_epic.add_task(task)
-
-    print("Creating issues")
-    gh_epic.create_issues()
-
-    print("Getting issues")
-    print(gh_epic.get_issues())
-
-    print("Getting tasks")
-    print(gh_epic.get_tasks())
-
-    input("Press enter to update DB")
-    db_manager.update_db(gh_epic.get_epic())
-
-    taskwithid = db_manager.get_task_with_id(70)
-    print("f: Task with id: ", taskwithid)
-
-    taskwithtitle = db_manager.get_task_with_title("TEST TEST TEST")
-    print("f: Task with title: ", taskwithtitle)
-    """
-
-"""     print("Deleting all issues")
-    gh_epic.close_all_issues() """
-
-#TODO create a test for this
-def ado_epic_test(config):
-    db_manager = DatabaseManager(config.db_collection, config.db_document)
-    setup_database(config.spreadsheet_id, db_manager)
-    epic = db_manager.fetch_database()
-    token = access_secret_version(config.project_id, config.ado_secret_id, config.gh_version_id)
-    az_epic = ado_epic("TrackPointDev", "TrackPoint", token, epic['title'], epic['problem'], epic['feature'], epic['value'])
-    
-    for task in epic['tasks']:
-        az_epic.add_task(task)
-
-    print("Creating issues")
-    az_epic.create_issues()
-
-    print("Getting issues")
-    print(az_epic.get_issues())
-
-    print("Getting tasks")
-    print(az_epic.get_tasks())
-
-    input("Press enter to update DB")
-    db_manager.update_db(az_epic.get_epic())
-
-    taskwithid = db_manager.get_task_with_id(70)
-    print("f: Task with id: ", taskwithid)
-
-    taskwithtitle = db_manager.get_task_with_title("TEST TEST TEST")
-    print("f: Task with title: ", taskwithtitle)
-
-    input("Press enter to continue")
-    print("Deleting epic")
-    db_manager.delete_epic()
 
 def main():
     try:
-        uvicorn.run(app, host="0.0.0.0", port=5000)
+        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+        #setup_database(config.spreadsheet_id, db)
     except KeyboardInterrupt:
         print("Closing listener")
-
-    #github_epic_test(config)
-    #ado_epic_test(config)
 
 
 if __name__ == "__main__":
