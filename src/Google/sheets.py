@@ -171,7 +171,7 @@ class Sheet:
         return header in self
 
 
-def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
+def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
     """
     Transforms a sheet into an Epic object.
     """
@@ -199,7 +199,9 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
         problem=problem,
         feature=feature,
         value=value,
-        tasks=[]
+        tasks=[],
+        users=[],
+        spreadsheetId=payload.get("spreadsheetId")
     )
 
 

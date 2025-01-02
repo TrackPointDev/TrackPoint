@@ -1,8 +1,9 @@
 from database import initfirebase
-from database.models import Epic, Task
+from database.models import Epic, Task, User
 from typing import Optional, Dict, Any, List, Union
 from fastapi import HTTPException
 from Google import sheets
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from firebase_functions.firestore_fn import (
   on_document_created,
@@ -252,7 +253,7 @@ class DatabaseManager:
         except Exception as e:  
             raise Exception(e)
     
-    def parse_sheet(self, spreadsheet_id: str) -> Epic:
+    def parse_sheet(self, payload: dict) -> Epic:
         """
         Parses a Google Sheet into an Epic object.
         Args:
@@ -261,14 +262,14 @@ class DatabaseManager:
             Epic: The parsed Epic object.
         """
 
-        # Retrieve data from 'Epic' and 'Tasks' sheets.
-        epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
-        tasks_sheet = sheets.get_sheet("Tasks", spreadsheet_id)
+        # Retrieve data from 'Epic' and 'Tasks' sheets respectively.
+        epic_sheet = sheets.get_sheet("Epic", payload.get("spreadsheetId"))
+        tasks_sheet = sheets.get_sheet("Tasks", payload.get("spreadsheetId"))
 
         task_list = []
 
         # Transform the data from the 'Epic' sheet into an 'Epic' object.
-        epic_data = sheets.transform_to_epics(epic_sheet)
+        epic_data = sheets.transform_to_epics(epic_sheet, payload)
         
         # Transform the data from the 'Tasks' sheet into a list of 'Task' objects.
         if epic_data:
@@ -278,7 +279,75 @@ class DatabaseManager:
                     task_list.append(task_object)
             epic_data.tasks = task_list
 
+        user = User(
+            name=payload.get("user").get("nickname"),
+            email=payload.get("user").get("email"),
+            epics=[epic_data.title]
+        )
+
+        epic_data.users.append(user) 
+
         # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
         #print(epic_data.model_dump(mode='json'))
 
         return epic_data
+    
+    def parse_user(self, payload: dict) -> User:
+        """
+        Parses a user from a payload.
+        Args:
+            payload (dict): The payload data to be parsed.
+        Returns:
+            User: The parsed User object.
+        """
+        user_data = payload.get("user")
+        user = User(
+            name=user_data.get("nickname"),
+            email=user_data.get("email"),
+            role=user_data.get("role"),
+            uID=user_data.get("uID")
+        )
+        return user
+
+    
+    def create_user(self, payload: dict) -> None:
+        try:
+            user = self.parse_user(payload)
+            doc_ref = self.db.collection("users").document()
+            doc_ref.set(user.model_dump(mode='json'))
+            print(f"Document '{user.name}' in collection 'users' added successfully!"
+                  f"\nUser ID: '{doc_ref.id}'")
+            user.uID = doc_ref.id
+            doc_ref.set(user.model_dump(mode='json'))
+        except Exception as e:  
+            raise Exception(e)
+        
+    def get_user(self, user_name):
+        try:
+            doc_ref = self.db.collection("users").where("name", "==", user_name)
+
+            doc = doc_ref.get()
+            if doc is not None:
+                return doc.to_dict()
+            else:
+                print(f"No such document '{user_name}' in collection '{self.db_collection}'")
+                return None
+        except Exception as e:  
+            raise Exception(e)
+
+    def get_all_users(self, user: Optional[str] = None):
+        try:
+            if user is None:
+                docs = self.db.collection("users").stream()
+                users = []
+                for doc in docs:
+                    users.append(doc.id)
+                return users
+            else:
+                query = (self.db.collection("users").where(filter=FieldFilter("name", "==", user))).stream()
+                for doc in query:
+                    user_data = doc.to_dict()
+                    user_data['id'] = doc.id
+                    return user_data
+        except Exception as e:  
+            raise Exception(e)

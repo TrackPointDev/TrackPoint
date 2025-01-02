@@ -5,8 +5,10 @@ from fastapi import Request
 
 from database.manager import DatabaseManager
 from database.setup import setup_database
-from routers import epics, tasks
+from routers import epics, tasks, users
 from Google import sheets
+
+from webhook import Webhook
 
 
 tags_metadata = [
@@ -22,7 +24,7 @@ app = FastAPI(title="TrackPoint-Backend",
               openapi_tags=tags_metadata)
 app.include_router(epics.router)
 app.include_router(tasks.router)
-
+app.include_router(users.router)
 
 #TODO create a config or env file for these
 class Config:
@@ -39,7 +41,21 @@ class Config:
         self.gh_version_id = "latest"
 
 
+def initialize_webhook():
+    """
+    Method to initialize a Webhook instance. Should be deprecated once back-end api is hosted on a cloud platform.
+    """
+    
+    webhook_instance = Webhook(
+        config.db_collection, 
+        config.db_document, 
+        config.project_id, 
+        config.gh_version_id, 
+        config.ngrok_secret_id)
+    return webhook_instance
+
 config = Config()
+initialize_webhook()
 db = DatabaseManager(config.db_collection, config.db_document)
 
 #TODO: For some reason, the DB only gets updated in the first run. Subsequent runs do not update the DB. Fix this.
@@ -54,7 +70,20 @@ async def listener(request: Request = None):
 
     print(f"Parsing epic from spreadsheet: {spreadsheet_id}")
 
-    sheet_epic = db.parse_sheet(spreadsheet_id)
+    user = payload.get("user")
+    print(f"User: {user}")
+
+    if user["nickname"] is not None:
+        user_document = user["nickname"]
+
+        existing_user = db.get_all_users(user_document)
+        if existing_user is None:
+            db.create_user(user)
+            print(f"Created new user: {user_document}")
+        else:
+            print(f"User {user_document} already exists") 
+
+    sheet_epic = db.parse_sheet(payload)
     print(f"Sheet epic: {sheet_epic}")
 
     existing_epic = db.get_epic(sheet_epic.title)
@@ -64,7 +93,6 @@ async def listener(request: Request = None):
         db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
         
     return {"status": 200, "message": "DB updated Succesfully"}
-
 
 def main():
     try:
