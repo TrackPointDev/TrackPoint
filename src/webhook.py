@@ -1,15 +1,9 @@
 import ngrok
-import time
 import re
-import os
-import json
-import uvicorn
-from fastapi import FastAPI, APIRouter
 from Google.sheets import Task
 from epics.database_epic import database_epic
 from secret_manager import access_secret_version
 from database.manager import DatabaseManager
-from fastapi import Request
 
 class Webhook:
     def __init__(self, db_collection, db_document, project_id, version_id, ngrok_secret_id):

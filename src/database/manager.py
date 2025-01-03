@@ -17,7 +17,7 @@ from firebase_functions.firestore_fn import (
 
 #Maybe more of a document manager than a database manager but I'm not sure what to call it
 class DatabaseManager:
-    def __init__(self, db_collection, db_document: Optional[str]) -> None:
+    def __init__(self, db_collection, db_document: Optional[str] = None) -> None:
         self.db = initfirebase()
         self.db_collection = db_collection
         self.db_document = db_document
