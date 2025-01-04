@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 
 from database.manager import DatabaseManager
 from database.models import Task
@@ -13,25 +13,32 @@ router = APIRouter(
 
 db = DatabaseManager("epics", "showcase")
 
-@router.post("")
-async def create_task(task: Task):
-    """
-    Creates a new task in the Firestore database.
+class TaskHandler:
+    def __init__(self, request: Request):
+        self.client = request.app.state.client
 
-    Args:
-        task (Task): The task to be created.
-    Returns:
-        dict: A dictionary containing the status and message of the operation.
-    """
-    task_json = task.model_dump(mode='json')
-    print(f"Received task: {task_json}")
+    @router.post("")
+    async def create_task(self, task: Task):
+        """
+        Creates a new task in the Firestore database.
 
-    try:
-        db.add_task(task_json)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+        Args:
+            task (Task): The task to be created.
+        Returns:
+            dict: A dictionary containing the status and message of the operation.
+        """
+        task_json = task.model_dump(mode='json')
+        print(f"Received task: {task_json}")
 
-    return {"status": 200, "message": "Task created successfully."}
+        response = self.client.post("https://example.org", json=task_json)
+        print(f"Response: {response}")
+
+        try:
+            db.add_task(task_json)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+        return {"status": 200, "message": "Task created successfully."}
 
 @router.get("")
 async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:

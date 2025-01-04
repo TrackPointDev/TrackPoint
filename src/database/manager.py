@@ -147,7 +147,7 @@ class DatabaseManager:
                 for task in tasks:
                     if (isinstance(task_identifier, int) and task['issueID'] == task_identifier) or \
                        (isinstance(task_identifier, str) and task['title'] == task_identifier):
-                        return task
+                        return Task(**task)
                 return None
             else:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
@@ -248,7 +248,7 @@ class DatabaseManager:
         
     def update_epic(self, epic_title, epic_data):
         try:
-            self.db.collection(self.db_collection).document(epic_title).set(epic_data)
+            self.db.collection(self.db_collection).document(epic_title).update(epic_data)
             print(f"Document '{epic_title}' in collection '{self.db_collection}' updated successfully!")
         except Exception as e:  
             raise Exception(e)

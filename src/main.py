@@ -10,6 +10,7 @@ from database.manager import DatabaseManager
 from database.models import Epic
 from routers import epics, tasks, users
 from Google import sheets
+from plugins import PluginManager
 
 from webhook import Webhook
 
@@ -21,10 +22,12 @@ tags_metadata = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize the Client on startup and add it to the state
-    async with httpx.AsyncClient() as client:
-        yield {'client': client}
-        # The Client closes on shutdown
+    """Initialize and close the httpx client on startup and shutdown."""
+    app.state.client = httpx.AsyncClient(timeout=120)
+    app.state.db = DatabaseManager("epics")
+    yield
+    # The Client closes on shutdown
+    await app.state.client.aclose()
 
 # Initialize FastAPI application
 app = FastAPI(title="TrackPoint-Backend", 
@@ -66,55 +69,17 @@ def initialize_webhook():
 config = Config()
 initialize_webhook()
 
+
 @app.post("/")
 async def root(request: Request = None):
     payload = await request.json()
     print(f"Received payload: {payload}")
 
-    db = DatabaseManager(config.db_collection)
+    plugin = PluginManager(app)
 
-    async def handle_epic():
-        sheet_epic = db.parse_sheet(payload)
-        existing_epic = db.get_epic(sheet_epic.title)
-        if existing_epic is None:
-            db.create_epic(sheet_epic.model_dump(mode='json'))
-        else:
-            db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
-        await gh_epic_setup(sheet_epic)
-
-    async def handle_user():
-        user = payload.get("user")
-        print(f"User: {user}")
-
-        if user["nickname"] and user["email"] is not None:
-            existing_user = db.get_all_users(user["nickname"])
-            if existing_user is None:
-                db.create_user(user)
-                print(f"Created new user: {user["nickname"]}")
-            else:
-                print(f"User {user["nickname"]} already exists")
-        else:
-            return {"status": 400, "message": "User has no nickname or email"}
+    await sheets.handle_sheet_webhook_event(request, plugin)
     
-    # Run both functions concurrently. Check for epics and users.
-    await asyncio.gather(handle_epic(), handle_user())
     return {"status": 200, "message": "DB updated Succesfully"}
-
-async def gh_epic_setup(epic: Epic):
-    """
-    Endpoint to handle GitHub webhooks.
-    """
-    epic_data = epic.model_dump(mode='json')
-    print(f"Received Epic: {epic_data}")
-    url = "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/setup"
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=epic_data)
-        response.raise_for_status()  # throw an error if not 2xx
-        return response.json()
-
-    LOGGER.info("Received GitHub webhook.")
-    return {"status": 200, "message": "Received GitHub webhook."}
 
 def main():
     try:

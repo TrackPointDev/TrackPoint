@@ -1,5 +1,6 @@
 import re
 import string
+import asyncio
 
 from dataclasses import dataclass
 from itertools import zip_longest
@@ -8,6 +9,9 @@ from googleapiclient.discovery import build
 
 from Google import authenticate_service
 from database.models import Task, Epic
+from plugins import PluginManager
+
+from fastapi import Request
 
 cache = {}
 
@@ -273,3 +277,54 @@ def _is_ascii_digit(value: str) -> bool:
     This function returns True only for strings containing digits 0-9.
     """
     return bool(re.match(r'^[0-9]+$', value))
+
+async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
+    """
+    Handles a webhook event from a Google Sheet.
+
+    Args:
+        payload (dict): The payload of the webhook event.
+    """
+
+    payload = await request.json()
+    sheet_id = payload.get("spreadsheetId")
+    sheet_name = payload.get("sheetName")
+
+    db = request.app.state.db
+
+    async def handle_epic():
+        sheet_epic = db.parse_sheet(payload)
+        existing_epic = db.get_epic(sheet_epic.title)
+        if existing_epic is None:
+            db.create_epic(sheet_epic.model_dump(mode='json'))
+            await plugin.post_to_plugin(sheet_epic, "setup")
+        else:
+            if sheet_name == "Tasks":
+                print("Updating task")
+                for task in sheet_epic.tasks:
+                    # for some reason issueID is not being updated. it is still None
+                    if payload.get("oldValue") == task.title:
+                        task.issueID = db.get_task(task.title).issueID
+            db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
+            await plugin.post_to_plugin(sheet_epic, "update")
+        
+    async def handle_user():
+        user = payload.get("user")
+        print(f"User: {user}")
+
+        if user["nickname"] and user["email"] is not None:
+            existing_user = db.get_all_users(user["nickname"])
+            if existing_user is None:
+                db.create_user(user)
+                print(f"Created new user: {user["nickname"]}")
+            else:
+                print(f"User {user["nickname"]} already exists")
+        else:
+            return {"status": 400, "message": "User has no nickname or email"}
+
+    #sheet = get_sheet(sheet_name=sheet_name, spreadsheet_id=sheet_id)
+    #epic = transform_to_epics(sheet, payload)
+
+    # Run both functions concurrently. Check for epics and users.
+    await asyncio.gather(handle_epic(), handle_user())
+    return {"status": 200, "message": "DB updated Succesfully"}

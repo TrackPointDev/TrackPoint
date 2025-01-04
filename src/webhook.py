@@ -5,6 +5,7 @@ from epics.database_epic import database_epic
 from secret_manager import access_secret_version
 from database.manager import DatabaseManager
 
+# TODO: icorporate the webhook into the FastAPI app contextmanager.
 class Webhook:
     def __init__(self, db_collection, db_document, project_id, version_id, ngrok_secret_id):
         self.db_collection = db_collection
