@@ -1,3 +1,5 @@
+import re
+
 from database import initfirebase
 from database.models import Epic, Task, User
 from typing import Optional, Dict, Any, List, Union
@@ -15,53 +17,13 @@ from firebase_functions.firestore_fn import (
   DocumentSnapshot,
 )
 
-#Maybe more of a document manager than a database manager but I'm not sure what to call it
+# TODO: Refactor DatabaseManager class, such that references are dynamícally passed from function caller.
 class DatabaseManager:
     def __init__(self, db_collection, db_document: Optional[str] = None) -> None:
         self.db = initfirebase()
         self.db_collection = db_collection
         self.db_document = db_document
         self.doc_ref = self.db.collection(self.db_collection).document(self.db_document)
-        
-    def fetch_database(self):
-        """
-        Fetches a document from a specified Firestore collection.
-        Returns:
-            dict: The document data as a dictionary if the document exists.
-            None: If the document does not exist or an error occurs.
-        """
-        try:
-            doc = self.doc_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
-                return data
-                #return json.dumps(data, indent=4)
-            else:
-                print(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
-                return None
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
-    
-    @on_document_updated(document="epics/MVP for TrackPoint")
-    def db_event_listener(self, event: Event[Change[DocumentSnapshot]]) -> None:
-        print(f"Change detected on document {event.params['title']}")
-
-        change = event.data
-        if change.before.exists:
-            before_data = change.before.to_dict()
-        else:
-            before_data = {}
-
-        if change.after.exists:
-            after_data = change.after.to_dict()
-        else:
-            after_data = {}
-
-        changed_fields = {k: after_data[k] for k in after_data if before_data.get(k) != after_data.get(k)}
-
-        print(f"Changed fields: {changed_fields}")
-        return changed_fields
 
 
     def add_task(self, task: Dict[str, Any]) -> None:
@@ -223,13 +185,14 @@ class DatabaseManager:
         except Exception as e:  
             raise Exception(e)
         
-    def get_epic(self, epic_title):
+    def get_epic(self, epic_title) -> Epic:
         try:
             doc_ref = self.db.collection(self.db_collection).document(epic_title)
 
             doc = doc_ref.get()
             if doc.exists:
-                return doc.to_dict()
+                doc = doc.to_dict()
+                return Epic(**doc)
             else:
                 print(f"No such document '{epic_title}' in collection '{self.db_collection}'")
                 return None
@@ -351,3 +314,33 @@ class DatabaseManager:
                     return user_data
         except Exception as e:  
             raise Exception(e)
+        
+    @staticmethod
+    def parse_body(body: str) -> dict:
+        """Parse the body text and extract values for Task attributes."""
+        task_data = {
+            'description': None,
+            'priority': None,
+            'story_point': None,
+            'comments': None
+        }
+        body = body.replace('**', '')  # Escape markdown characters
+        
+        # Regular expressions to extract values
+        patterns = {
+            'description': r'Description:\s*(.*)',
+            'priority': r'Priority:\s*(.*)',
+            'story_point': r'Story Point:\s*(\d+)',
+            'comments': r'Comments:\s*(.*)'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, body)
+            if match:
+                value = match.group(1).strip()
+                if key == 'story_point':
+                    task_data[key] = int(value)  # Convert story_point to int
+                else:
+                    task_data[key] = value
+        
+        return task_data

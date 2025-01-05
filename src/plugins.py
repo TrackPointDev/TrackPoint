@@ -29,9 +29,13 @@ class PluginManager:
             #response.raise_for_status()  # throw an error if not 2xx
         except Exception as e:
             raise HTTPException(e)
-        self.assign_issue_id(response.json(), payload)
-        print(f"Response: {response}")
-        return response.json()
+        
+        if isinstance(response, dict): # Sometimes response returns <Response [200 OK]> instead of a dict. This handles that.
+            print(f"Response: {response.json()}")
+            self.assign_issue_id(response.json(), payload)
+            return response.json()
+        else:
+            return {"status": 200, "message": response}
 
     def assign_issue_id(self, response: dict, payload: Union[Epic, Task]) -> Task:
         if isinstance(payload, Task):

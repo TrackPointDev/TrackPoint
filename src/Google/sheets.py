@@ -222,8 +222,6 @@ def get_sheet(
     If cached is True, the sheet is cached so that subsequent calls to this function with the same
     sheet name and ID will return the same Sheet object.
     """
-    sheet_key = f"{spreadsheet_id}_{sheet_name}"
-    
 
     sheets_api = get_sheets_api()
 
@@ -278,6 +276,16 @@ def _is_ascii_digit(value: str) -> bool:
     """
     return bool(re.match(r'^[0-9]+$', value))
 
+def update_existing_task_issue_ids(existing_epic: Epic, new_epic: Epic, old_value: str) -> None:
+    """
+    Copies issueID from existing tasks to new tasks if the title matches oldValue.
+    """
+    print("Updating task")
+    for item in existing_epic.tasks:
+        for task in new_epic.tasks:
+            if old_value == item.title:
+                task.issueID = item.issueID
+
 async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
     """
     Handles a webhook event from a Google Sheet.
@@ -287,24 +295,19 @@ async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
     """
 
     payload = await request.json()
-    sheet_id = payload.get("spreadsheetId")
-    sheet_name = payload.get("sheetName")
-
     db = request.app.state.db
 
     async def handle_epic():
         sheet_epic = db.parse_sheet(payload)
         existing_epic = db.get_epic(sheet_epic.title)
+
         if existing_epic is None:
             db.create_epic(sheet_epic.model_dump(mode='json'))
             await plugin.post_to_plugin(sheet_epic, "setup")
         else:
-            if sheet_name == "Tasks":
-                print("Updating task")
-                for task in sheet_epic.tasks:
-                    # for some reason issueID is not being updated. it is still None
-                    if payload.get("oldValue") == task.title:
-                        task.issueID = db.get_task(task.title).issueID
+            if payload.get("sheetName") == "Tasks":
+                update_existing_task_issue_ids(existing_epic, sheet_epic, payload.get("oldValue"))
+                
             db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
             await plugin.post_to_plugin(sheet_epic, "update")
         
@@ -321,9 +324,6 @@ async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
                 print(f"User {user["nickname"]} already exists")
         else:
             return {"status": 400, "message": "User has no nickname or email"}
-
-    #sheet = get_sheet(sheet_name=sheet_name, spreadsheet_id=sheet_id)
-    #epic = transform_to_epics(sheet, payload)
 
     # Run both functions concurrently. Check for epics and users.
     await asyncio.gather(handle_epic(), handle_user())
