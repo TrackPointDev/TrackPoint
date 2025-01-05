@@ -11,12 +11,12 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-db = DatabaseManager("epics", "showcase")
 
 class TaskHandler:
     def __init__(self, request: Request):
         self.client = request.app.state.client
         self.logger = request.app.state.logger
+        self.db = request.app.state.db
 
     @router.post("")
     async def create_task(self, task: Task):
@@ -35,14 +35,14 @@ class TaskHandler:
         print(f"Response: {response}")
 
         try:
-            db.add_task(task_json)
+            self.db.add_task(task_json)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
         return {"status": 200, "message": "Task created successfully."}
 
     @router.get("")
-    async def get_tasks(taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
+    async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
         """
         Get either a specific task or the entire list of tasks in the Firestore database.
 
@@ -59,16 +59,16 @@ class TaskHandler:
             if isinstance(taskID, str) and taskID.isdigit():
                 taskID = int(taskID)
             try:
-                return db.get_task(taskID)
+                return self.db.get_task(taskID)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
         try:
-            return db.get_tasks_list()
+            return self.db.get_tasks_list()
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
     @router.put("")
-    async def update_task(taskID: Annotated[int | str | None, Header()], task: Task):
+    async def update_task(self, taskID: Annotated[int | str | None, Header()], task: Task):
         """
         Updates a given task in the Firestore database.
 
@@ -86,14 +86,14 @@ class TaskHandler:
             if isinstance(taskID, str) and taskID.isdigit():
                 taskID = int(taskID)
             try:
-                db.update_task(taskID, task.model_dump(mode='json'))
+                self.db.update_task(taskID, task.model_dump(mode='json'))
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
         return {"message": "Task updated"}
 
     @router.delete("")
-    async def delete_task(taskID: Annotated[int | str, Header()]):
+    async def delete_task(self, taskID: Annotated[int | str, Header()]):
         """
         Delete a specific task in the Firestore database.
 
@@ -108,7 +108,7 @@ class TaskHandler:
         if isinstance(taskID, str) and taskID.isdigit():
             taskID = int(taskID)
         try:
-            db.delete_task(taskID)
+            self.db.delete_task(taskID)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
