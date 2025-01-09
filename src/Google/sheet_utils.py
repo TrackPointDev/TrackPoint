@@ -34,6 +34,12 @@ class SheetUtils:
         else:
             body = self.build_new_task_row_request(task, spreadsheetID)
             self.update_sheets_data(body, "adding task", spreadsheetID)
+    
+    def update_task(self, task: Task, spreadsheetID: str):
+        """Method for updating a task in the Google Sheets document."""
+
+        body = self.build_update_task_request(task, spreadsheetID)
+        self.update_sheets_data(body, "updating task", spreadsheetID)
 
     def build_new_task_row_request(self, task: Task, spreadsheetID: str) -> list[dict]:
         """
@@ -46,7 +52,7 @@ class SheetUtils:
         """
         
         sheet_name = "Tasks"
-        sheet_id = self.get_sheet_id_by_name("Tasks", spreadsheetID)
+        sheet_id = self.get_sheet_id_by_name(sheet_name, spreadsheetID)
         column_mapping = self.map_to_column(task)
 
         row_index = len(get_sheet(sheet_name, spreadsheetID).rows) + 1
@@ -80,6 +86,76 @@ class SheetUtils:
 
         # Encapsulate all request actions in a single list.
         return [append_cells_request, update_dimension_request]
+    
+    def update_profile_row_request(self, task: Task, spreadsheetID: str):
+        """
+        Builds a list of update requests for several columns for an existing profile row in the Sheets document.
+        Retries the operation if a required column is added dynamically.
+        """
+        sheet_name = "Tasks"
+        sheet_id = self.get_sheet_id_by_name(sheet_name, spreadsheetID)
+        row_index = None
+        sheet = get_sheet(sheet_name, spreadsheetID)
+
+        for i, row in enumerate(sheet.rows, start=1):
+            if row[i] == task.title:
+                row_index = i
+                break
+
+        header_data = {
+            "title": task.title,
+            "duplicate / comments": task.comments,
+            "issue id": task.issueID,
+            "priority": task.priority,
+            "description": task.description,
+            "story point": task.story_point,
+        }
+
+        column_indexes = self.find_column_indexes(sheet, header_data.keys())
+
+        update_requests = []
+        for header_name, data in header_data.items():
+            column_index = column_indexes.get(header_name, None)
+            if data is None or column_index is None:
+                continue
+
+            user_entered_value = {}
+            cell_format = {}
+            if isinstance(data, int):
+                user_entered_value["numberValue"] = data
+            else:
+                user_entered_value["stringValue"] = str(data)
+
+            update_requests.append({
+                "updateCells": {
+                    "rows": [{
+                        "values": [{"userEnteredValue": user_entered_value, "userEnteredFormat": cell_format}]
+                    }],
+                    "fields": "userEnteredValue,userEnteredFormat.numberFormat",
+                    "start": {
+                        "sheetId": sheet_id,
+                        "rowIndex": row_index,
+                        "columnIndex": column_index - 1  # Adjust for 0-based indexing
+                    }
+                }
+            })
+
+        update_requests.append({
+            "updateDimensionProperties": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "dimension": "ROWS",
+                    "startIndex": row_index - 1,
+                    "endIndex": row_index
+                },
+                "properties": {
+                    "pixelSize": 21
+                },
+                "fields": "pixelSize"
+            }
+        })
+
+        return update_requests
 
     def map_task_to_column_values(self, task: Task, column_mappings, spreadsheetID: str):
         values = []
@@ -166,6 +242,17 @@ class SheetUtils:
                 return sheet_name
 
         return None
+    
+    def find_column_indexes(self, sheet, header_names):
+        """
+        Finds the column indexes for the specified header names in the given sheet.
+        Returns a dictionary mapping header names to their column indexes.
+        """
+        column_indexes = {}
+        for i, header in enumerate(sheet.headers, start=1):
+            if header.lower() in header_names:
+                column_indexes[header.lower()] = i
+        return column_indexes
     
     
 

@@ -48,7 +48,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(e)
         
-    def update_task(self, task_identifier, updated_task):
+    def update_task(self, task: Task, epic_id: str) -> None:
         """
         Updates a specific task in the 'tasks' list within a Firestore document.
         Args:
@@ -60,29 +60,30 @@ class DatabaseManager:
             Exception: If an error occurs during the update operation, it will be caught and printed.
         """
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
             
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                
+    
                 task_found = False
 
-                for task in tasks:
-                    if (isinstance(task_identifier, int) and task.get('issueID') == task_identifier) or \
-                        (isinstance(task_identifier, str) and task.get('title') == task_identifier):
-                        task.update({k: v for k, v in updated_task.items() if v is not None})
+                for item in tasks:
+                    if (isinstance(task.issueID, int) and item.get('issueID') == task.issueID) or \
+                        (isinstance(task.title, str) and item.get('title') == task.title):
+                        item.update(task.model_dump(mode='json'))
                         task_found = True
                         break
                 
                 if not task_found:
-                    print(f"Task with title: '{task_identifier}' not found.")
+                    print(f"Task with title: '{task.title}' not found.")
                     return None
                 
                 self.doc_ref.update({'tasks': tasks})
-                print(f"Task '{task_identifier}' updated successfully!")
+                print(f"Task '{task.title}' updated successfully!")
             else:
-                raise Exception("No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(f"Error with writing to Google Cloud: {e}")
         
@@ -186,17 +187,32 @@ class DatabaseManager:
         except Exception as e:  
             raise Exception(e)
         
-    def get_epic(self, epic_title: str, identifier: str = None) -> Epic:
+    def get_epic(self, epic_title: str = None, identifier: str = None) -> Epic:
+        """Retreive an epic from the Firestore database based on the epic_title or identifier."""
         try:
-            doc_ref = self.db.collection(self.db_collection).document(epic_title)
-
-            doc = doc_ref.get()
-            if doc.exists:
-                doc = doc.to_dict()
-                return Epic(**doc)
-            else:
-                print(f"No such document '{epic_title}' in collection '{self.db_collection}'")
+            if epic_title:
+                doc_ref = self.db.collection(self.db_collection).document(epic_title)
+                doc = doc_ref.get()
+                if doc.exists:
+                    doc = doc.to_dict()
+                    return Epic(**doc)
+                else:
+                    print(f"No such document '{epic_title}' in collection '{self.db_collection}'")
+                    return None
+            elif identifier:
+                query = (
+                    self.db.collection(self.db_collection)
+                    .where(filter=FieldFilter("repoName", "==", identifier))
+                    .limit(1))
+                docs = query.stream()
+                for doc in docs:
+                    if doc.exists:
+                        doc = doc.to_dict()
+                        return Epic(**doc)
+                print(f"No document with repoName '{identifier}' found in collection '{self.db_collection}'")
                 return None
+            else:
+                raise ValueError("Either epic_title or identifier must be provided.")
         except Exception as e:  
             raise Exception(e)
     

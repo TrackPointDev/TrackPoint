@@ -20,9 +20,9 @@ class TaskHandler:
         self.sheet = sheet_utils.SheetUtils(request)
 
     @router.post("/add")
-    async def create_task(self, task: Task = None, epicID: Annotated[int | str, Header()] = None):
+    async def create_task(self, task: Task = None, epicID: Annotated[str, Header()] = None):
         """
-        Creates a new task in the Firestore database.
+        Creates a new task within an epic and stores it on the associated sheet as well as the Firestore DB.
 
         Args:
             task (Task): The task to be created.
@@ -33,17 +33,17 @@ class TaskHandler:
         print(f"Received task: {task_json}")
 
         try:
-            #self.db.add_task(task, epicID)
-            epic = self.db.get_epic(epicID)
+            self.db.add_task(task, epicID)
+            epic = self.db.get_epic(identifier=epicID)
             print("Writing to sheet...")
             self.sheet.add_task(task, spreadsheetID=epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
-        return {"status": 200, "message": "Task created successfully."}
+        return {"status": 200, "message": f"Task created successfully. Added to Epic '{epic.title}.'"}
 
     @router.get("/get")
-    async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
+    async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None, epicID: Annotated[str, Header()] = None) -> Union[dict, list]:
         """
         Get either a specific task or the entire list of tasks in the Firestore database.
 
@@ -69,7 +69,7 @@ class TaskHandler:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
     @router.put("/update")
-    async def update_task(self, taskID: Annotated[int | str | None, Header()], task: Task):
+    async def update_task(self, task: Task = None, epicID: Annotated[str, Header()] = None):
         """
         Updates a given task in the Firestore database.
 
@@ -82,14 +82,16 @@ class TaskHandler:
             HTTPException: If an error occurs during the update operation, it will be caught and a 500 error will be raised.
         """
 
-        if taskID:
-            # For some reason, headers are casted to strings even when an int is passed. This is a workaround.
-            if isinstance(taskID, str) and taskID.isdigit():
-                taskID = int(taskID)
-            try:
-                self.db.update_task(taskID, task.model_dump(mode='json'))
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+        try:
+            print("retrieving epic...")
+            epic = self.db.get_epic(identifier=epicID)
+            print(f"Got epic with title: {epic.title}")
+            print("updating task in db...")
+            self.db.update_task(task, epic.title)
+            print("updating task in sheet...")
+            self.sheet.update_task(task, epic.spreadsheetId)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
         return {"message": "Task updated"}
 

@@ -32,7 +32,7 @@ class Epic(BaseModel):
 
 class User(BaseModel):
     name: str = Field(..., description="The name of the user.")
-    email: Optional[EmailStr] = Field("user@example.org", description="The email of the user.")
+    email: Optional[str] = Field("user@example.org", description="The email of the user.")
     role: Optional[str] = Field(None, description="The role of the user.")
     uID: Optional[str] = Field(None, description="The unique ID of the user.")
     epics: Optional[List[str]] = Field(None, description="A list of epics associated with the user.")
