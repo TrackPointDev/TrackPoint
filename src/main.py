@@ -26,15 +26,19 @@ async def lifespan(app: FastAPI):
     app.state.client = httpx.AsyncClient(timeout=120)
     app.state.db = DatabaseManager("epics")
     app.state.logger = logging.getLogger("uvicorn.error")
+
     app.state.logger.info("Setting up NGROK Tunnel.")
     ngrok.forward(5000, 
                   domain="native-koi-miserably.ngrok-free.app", 
                   authtoken=access_secret_version("trackpointdb", "NGROK_AUTHTOKEN", "latest"))
     app.state.logger.info(f"NGROK authenticated! Ingress established at: https://native-koi-miserably.ngrok-free.app")
+
     yield
+    
     # The Client closes on shutdown
     app.state.logger.info("Closing HTTPX client.")
     await app.state.client.aclose()
+    
     app.state.logger.info("Tearing Down Ngrok Tunnel")
     ngrok.disconnect()
 

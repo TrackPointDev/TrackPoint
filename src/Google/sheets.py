@@ -211,17 +211,16 @@ def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
 
 def get_sheet(
     sheet_name: Optional[str] = None,
-    spreadsheet_id: Optional[str] = None,
-    cached: bool = True
+    spreadsheet_id: Optional[str] = None
 ) -> Sheet:
     """
     Returns a Sheet object representing the sheet with the given name in the given spreadsheet.
 
     If sheet_name is None, the first sheet in the spreadsheet is returned.
-    If spreadsheet_id is None, the spreadsheet_id ID is retrieved from the command line arguments. (NOT IMPLEMENTED)
-    If cached is True, the sheet is cached so that subsequent calls to this function with the same
-    sheet name and ID will return the same Sheet object.
+    If spreadsheet_id is None, the spreadsheet_id ID is retrieved from the command line arguments. (NOT IMPLEMENTED).
     """
+
+    print(f"Getting sheet {sheet_name} from spreadsheet {spreadsheet_id}")
 
     sheets_api = get_sheets_api()
 
@@ -255,12 +254,11 @@ def _spreadsheet_range(
 
 
 def get_sheets_api():
-    if "sheets_api" not in cache:
-        credentials = authenticate_service()
-        service = build("sheets", "v4", credentials=credentials)
-        cache["sheets_api"] = service.spreadsheets()
+    credentials = authenticate_service()
+    service = build("sheets", "v4", credentials=credentials)
+    sheets_api = service.spreadsheets()
 
-    return cache["sheets_api"]
+    return sheets_api
 
 
 def clean(value: str) -> str:
@@ -275,6 +273,19 @@ def _is_ascii_digit(value: str) -> bool:
     This function returns True only for strings containing digits 0-9.
     """
     return bool(re.match(r'^[0-9]+$', value))
+
+def create_text_cell(text):
+    field = {"userEnteredValue": {}}
+    field["userEnteredValue"]["stringValue"] = text
+
+    return field
+
+def create_number_cell(num):
+    return {
+        "userEnteredValue": {
+            "numberValue": num
+        }
+    }
 
 def update_existing_task_issue_ids(existing_epic: Epic, new_epic: Epic, old_value: str) -> None:
     """

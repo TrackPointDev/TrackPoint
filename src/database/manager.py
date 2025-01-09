@@ -16,17 +16,17 @@ from firebase_functions.firestore_fn import (
   Change,
   DocumentSnapshot,
 )
-
+# TODO: fuck doc_ref. Make all endpoints initialize doc_ref based on argument parameter.
 # TODO: Refactor DatabaseManager class, such that references are dynamícally passed from function caller.
 class DatabaseManager:
     def __init__(self, db_collection, db_document: Optional[str] = None) -> None:
         self.db = initfirebase()
         self.db_collection = db_collection
         self.db_document = db_document
-        self.doc_ref = self.db.collection(self.db_collection).document(self.db_document)
+        self.doc_ref = self.db.collection(self.db_collection).document(self.db_document) if db_document else None
 
 
-    def add_task(self, task: Dict[str, Any]) -> None:
+    def add_task(self, task: Task, epic_id: str) -> None:
         """
         Adds a new task to the 'tasks' list within the Firestore document.
         Args:
@@ -35,13 +35,14 @@ class DatabaseManager:
             None
         """
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                tasks.append(task)
-                self.doc_ref.update({'tasks': tasks})
-                print(f"Task added successfully to document '{self.db_document}' in collection '{self.db_collection}'!")
+                tasks.append(task.model_dump(mode='json'))
+                doc_ref.update({'tasks': tasks})
+                print(f"Task added successfully to document '{epic_id}' in collection '{self.db_collection}'!")
             else:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:

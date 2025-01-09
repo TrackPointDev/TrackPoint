@@ -1,9 +1,9 @@
 from typing import Annotated, Union
 from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi_utils.cbv import cbv
 
-from database.manager import DatabaseManager
 from database.models import Task
-
+from Google import sheet_utils
 
 router = APIRouter(
     prefix="/epics/tasks",
@@ -11,15 +11,16 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
+@cbv(router)
 class TaskHandler:
     def __init__(self, request: Request):
         self.client = request.app.state.client
         self.logger = request.app.state.logger
         self.db = request.app.state.db
+        self.sheet = sheet_utils.SheetUtils(request)
 
-    @router.post("")
-    async def create_task(self, task: Task):
+    @router.post("/add")
+    async def create_task(self, task: Task = None, epicID: Annotated[int | str, Header()] = None):
         """
         Creates a new task in the Firestore database.
 
@@ -31,17 +32,17 @@ class TaskHandler:
         task_json = task.model_dump(mode='json')
         print(f"Received task: {task_json}")
 
-        response = self.client.post("https://example.org", json=task_json)
-        print(f"Response: {response}")
-
         try:
-            self.db.add_task(task_json)
+            self.db.add_task(task, epicID)
+            epic = self.db.get_epic(epicID)
+            print(f"Got epic: {epic.title} with spreadsheet ID: {epic.spreadsheetId}")
+            self.sheet.add_task(task, spreadsheetID=epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
         return {"status": 200, "message": "Task created successfully."}
 
-    @router.get("")
+    @router.get("/get")
     async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None) -> Union[dict, list]:
         """
         Get either a specific task or the entire list of tasks in the Firestore database.
@@ -67,7 +68,7 @@ class TaskHandler:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
-    @router.put("")
+    @router.put("/update")
     async def update_task(self, taskID: Annotated[int | str | None, Header()], task: Task):
         """
         Updates a given task in the Firestore database.
@@ -92,7 +93,7 @@ class TaskHandler:
 
         return {"message": "Task updated"}
 
-    @router.delete("")
+    @router.delete("/delete")
     async def delete_task(self, taskID: Annotated[int | str, Header()]):
         """
         Delete a specific task in the Firestore database.

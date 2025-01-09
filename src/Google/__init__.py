@@ -21,7 +21,7 @@ def authenticate_service():
     See docs: https://developers.google.com/sheets/api/quickstart/python"""
 
     scopes = [
-        "https://www.googleapis.com/auth/spreadsheets.readonly"
+        "https://www.googleapis.com/auth/spreadsheets"
     ]
 
     creds = None
