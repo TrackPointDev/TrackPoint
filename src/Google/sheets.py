@@ -4,11 +4,11 @@ import asyncio
 
 from dataclasses import dataclass
 from itertools import zip_longest
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, get_args
 from googleapiclient.discovery import build
 
 from Google import authenticate_service
-from database.models import Task, Epic
+from database.models import Task, Epic, TaskPriority
 from plugins import PluginManager
 
 from fastapi import Request
@@ -280,12 +280,36 @@ def create_text_cell(text):
 
     return field
 
-def create_number_cell(num):
-    return {
-        "userEnteredValue": {
-            "numberValue": num
+def create_number_cell(num: Optional[int] = None):
+    if isinstance(num, int):
+        return {
+            "userEnteredValue": {
+                "numberValue": num
+            }
         }
-    }
+    else:
+        return {
+            "userEnteredValue": {
+                "formulaValue": num
+            }
+        }
+
+def create_dropdown_cell(initial_content: Union[str, int]):
+        priority_options = get_args(TaskPriority)
+        print(f"Priority options: {priority_options}")
+        values = [{"userEnteredValue": option} for option in priority_options]
+        return {
+            "dataValidation": {
+                "condition": {
+                    "type": "ONE_OF_LIST",
+                    "values": values,
+                },
+                "showCustomUi": True,
+            },
+            "userEnteredValue": {
+                "stringValue": initial_content,
+            },
+        }
 
 def update_existing_task_issue_ids(existing_epic: Epic, new_epic: Epic, old_value: str) -> None:
     """

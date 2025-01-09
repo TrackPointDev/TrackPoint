@@ -6,11 +6,13 @@ from googleapiclient.discovery import build
 
 from Google import authenticate_service
 from database.models import Task, Epic
-from Google.sheets import get_sheet, get_sheets_api, create_text_cell, create_number_cell
+from Google.sheets import get_sheet, get_sheets_api, create_text_cell, create_number_cell, create_dropdown_cell
 
 from fastapi import Request, HTTPException
 
 class SheetUtils:
+    """This class contains utility methods for writing to Google Sheets."""
+
     def __init__(self, request: Request):
         self.request = request
         self.logger = request.app.state.logger
@@ -30,7 +32,6 @@ class SheetUtils:
             if len(self.tasks_to_add) >= limit:
                 self.batch_process_tasks(self.tasks_to_add, limit)
         else:
-            print(f"Adding task '{task.title}' to the database. ID: {spreadsheetID}")
             body = self.build_new_task_row_request(task, spreadsheetID)
             self.update_sheets_data(body, "adding task", spreadsheetID)
 
@@ -43,15 +44,12 @@ class SheetUtils:
         :param campaign_type: The type of campaign the profile is being added to.
         :return: List of dictionaries, each dict being a request to Google Sheets API.
         """
-        print(f"Building new task row request for {task.title}")
-        sheet_id = "Tasks"
-        print(f"Sheet ID: {sheet_id}")
+        
+        sheet_name = "Tasks"
+        sheet_id = self.get_sheet_id_by_name("Tasks", spreadsheetID)
         column_mapping = self.map_to_column(task)
-        print(f"Column mapping: {column_mapping}")
 
-        row_index = len(get_sheet(sheet_id, spreadsheetID).rows) + 1
-        print(f"Row index: {row_index}")
-
+        row_index = len(get_sheet(sheet_name, spreadsheetID).rows) + 1
         # Construct the individual request components
         append_cells_request = {
             "appendCells": {
@@ -86,10 +84,8 @@ class SheetUtils:
     def map_task_to_column_values(self, task: Task, column_mappings, spreadsheetID: str):
         values = []
 
-        print(f"Mapping task '{task.title}' to columns...")
-
         for header in get_sheet("Tasks", spreadsheetID).headers:
-            column_key = header.upper()
+            column_key = header.lower()
 
             if column_key in column_mappings:
                 values.append(column_mappings[column_key](task.model_dump(mode='json')))
@@ -102,22 +98,21 @@ class SheetUtils:
 
     def map_to_column(self, object: Union[Epic, Task]):
         if isinstance(object, Task):
-            task_json = object.model_dump(mode='json')
             columns_to_map = {
-                "Title": lambda task_json: create_text_cell(task_json["title"]),
-                "Duplicate / comments": lambda task_json: create_text_cell(task_json["comments"]),
-                "Issue ID": lambda task_json: create_number_cell(task_json["username"]),
-                "Priority": lambda task_json: create_text_cell(task_json["priority"]),
-                "Story Points": lambda task_json: create_number_cell(task_json["story_point"]),
+                "title": lambda task: create_text_cell(task["title"]),
+                "duplicate / comments": lambda task: create_text_cell(task["comments"]),
+                "description": lambda task: create_text_cell(task["description"]),
+                "issue id": lambda task: create_number_cell(task["issueID"]),
+                "priority": lambda task: create_dropdown_cell(initial_content=task["priority"]),
+                "story point": lambda task: create_number_cell(task["story_point"]),
             }
             return columns_to_map
         elif isinstance(object, Epic):
-            epic_json = object.model_dump(mode='json')
             columns_to_map = {
-                "Title": lambda epic_json: create_text_cell(epic_json["title"]),
-                "Problem": lambda epic_json: create_text_cell(epic_json["problem"]),
-                "Feature": lambda epic_json: create_text_cell(epic_json["feature"]),
-                "Value": lambda epic_json: create_text_cell(epic_json["value"]),
+                "Title": lambda epic: create_text_cell(epic["title"]),
+                "Problem": lambda epic: create_text_cell(epic["problem"]),
+                "Feature": lambda epic: create_text_cell(epic["feature"]),
+                "Value": lambda epic: create_text_cell(epic["value"]),
             }
             return columns_to_map
 
@@ -156,5 +151,21 @@ class SheetUtils:
                     time.sleep(60)
 
         raise Exception(f"Failed {operation} after 5 attempts.")
+    
+    def get_sheet_id_by_name(self, sheet_name: str, spreadsheetID: str) -> Optional[int]:
+        """
+        Returns the ID of the sheet with the given name, or None if it doesn't exist.
+        """
+
+        sheet = get_sheets_api()
+
+        spreadsheet = sheet.get(spreadsheetId=spreadsheetID).execute()
+        for sheet in spreadsheet.get('sheets'):
+            if sheet['properties']['title'] == sheet_name:
+                sheet_name = sheet['properties']['sheetId']
+                return sheet_name
+
+        return None
+    
     
 

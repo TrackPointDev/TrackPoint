@@ -63,7 +63,7 @@ async def root(request: Request = None):
 
 def main():
     try:
-        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info")
+        uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info", reload=True)
     except KeyboardInterrupt:
         print("Closing listener")
 

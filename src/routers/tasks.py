@@ -33,9 +33,9 @@ class TaskHandler:
         print(f"Received task: {task_json}")
 
         try:
-            self.db.add_task(task, epicID)
+            #self.db.add_task(task, epicID)
             epic = self.db.get_epic(epicID)
-            print(f"Got epic: {epic.title} with spreadsheet ID: {epic.spreadsheetId}")
+            print("Writing to sheet...")
             self.sheet.add_task(task, spreadsheetID=epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")

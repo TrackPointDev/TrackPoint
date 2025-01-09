@@ -186,7 +186,7 @@ class DatabaseManager:
         except Exception as e:  
             raise Exception(e)
         
-    def get_epic(self, epic_title) -> Epic:
+    def get_epic(self, epic_title: str, identifier: str = None) -> Epic:
         try:
             doc_ref = self.db.collection(self.db_collection).document(epic_title)
 
