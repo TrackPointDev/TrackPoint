@@ -1,12 +1,17 @@
 import os
 import uvicorn
-from fastapi import FastAPI
-from fastapi import Request
+import httpx
+import ngrok
+import logging
+
+from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 
 from database.manager import DatabaseManager
-from database.setup import setup_database
-from routers import epics, tasks
+from routers import epics, tasks, users
 from Google import sheets
+from plugins import PluginManager
+from secret_manager import access_secret_version
 
 
 tags_metadata = [
@@ -15,64 +20,52 @@ tags_metadata = [
     {"name": "Tasks", "description": "Management of tasks within epics."}
 ]
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize lifespan objects, like httpx client, db, tunneling services, etc. Ensure they are closed on shutdown."""
+    app.state.client = httpx.AsyncClient(timeout=120)
+    app.state.db = DatabaseManager("epics")
+    app.state.logger = logging.getLogger("uvicorn.error")
+
+    app.state.logger.info("Setting up NGROK Tunnel.")
+    ngrok.forward(5000, 
+                  domain="native-koi-miserably.ngrok-free.app", 
+                  authtoken=access_secret_version("trackpointdb", "NGROK_AUTHTOKEN", "latest"))
+    app.state.logger.info(f"NGROK authenticated! Ingress established at: https://native-koi-miserably.ngrok-free.app")
+
+    yield
+    
+    # The Client closes on shutdown
+    app.state.logger.info("Closing HTTPX client.")
+    await app.state.client.aclose()
+    
+    app.state.logger.info("Tearing Down Ngrok Tunnel")
+    ngrok.disconnect()
 
 # Initialize FastAPI application
 app = FastAPI(title="TrackPoint-Backend", 
               description="API for TrackPoint's backend.",
-              openapi_tags=tags_metadata)
+              openapi_tags=tags_metadata,
+              lifespan=lifespan)
 app.include_router(epics.router)
 app.include_router(tasks.router)
+app.include_router(users.router) 
 
-
-#TODO create a config or env file for these
-class Config:
-    def __init__(self):
-        self.spreadsheet_id = "1o5JoaPwq7uP9oYs9KuhFBc9MJP6JybIhaLRUscgame8"
-        self.db_collection = "epics"
-        self.db_document = "showcase"
-        self.owner = "TrackPointDev"
-        self.repo = "TrackPointTest"
-        self.project_id = "trackpointdb"
-        self.gh_secret_id = "hamsterpants-github-pat"
-        self.ado_secret_id = "az-devops-pat"
-        self.ngrok_secret_id = "NGROK_AUTHTOKEN"
-        self.gh_version_id = "latest"
-
-
-config = Config()
-db = DatabaseManager(config.db_collection, config.db_document)
-
-#TODO: For some reason, the DB only gets updated in the first run. Subsequent runs do not update the DB. Fix this.
-@app.post("/")
-async def listener(request: Request = None):
+@app.post("/", tags=["Root"])
+async def root(request: Request = None):
     payload = await request.json()
-    print(f"Received payload: {payload}")
+    request.app.state.logger.info(f"Received payload: {payload}")
+    plugin = PluginManager(app)
 
-    db = DatabaseManager(config.db_collection, config.db_document)
-
-    spreadsheet_id = payload.get("spreadsheetId")
-
-    print(f"Parsing epic from spreadsheet: {spreadsheet_id}")
-
-    sheet_epic = db.parse_sheet(spreadsheet_id)
-    print(f"Sheet epic: {sheet_epic}")
-
-    existing_epic = db.get_epic(sheet_epic.title)
-    if existing_epic is None:
-        db.create_epic(sheet_epic.model_dump(mode='json'))
-    else:
-        db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
-        
+    await sheets.handle_sheet_webhook_event(request, plugin)
+    
     return {"status": 200, "message": "DB updated Succesfully"}
-
 
 def main():
     try:
-        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-        #setup_database(config.spreadsheet_id, db)
+        uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info", reload=True)
     except KeyboardInterrupt:
         print("Closing listener")
-
 
 if __name__ == "__main__":
     main()

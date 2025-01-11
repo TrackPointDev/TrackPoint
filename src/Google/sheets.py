@@ -1,13 +1,17 @@
 import re
 import string
+import asyncio
 
 from dataclasses import dataclass
 from itertools import zip_longest
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, get_args
 from googleapiclient.discovery import build
 
 from Google import authenticate_service
-from database.models import Task, Epic
+from database.models import Task, Epic, TaskPriority
+from plugins import PluginManager
+
+from fastapi import Request
 
 cache = {}
 
@@ -171,7 +175,7 @@ class Sheet:
         return header in self
 
 
-def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
+def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
     """
     Transforms a sheet into an Epic object.
     """
@@ -199,25 +203,22 @@ def transform_to_epics(sheet: Sheet) -> Optional[Epic]:
         problem=problem,
         feature=feature,
         value=value,
-        tasks=[]
+        tasks=[],
+        users=[],
+        spreadsheetId=payload.get("spreadsheetId")
     )
 
 
 def get_sheet(
     sheet_name: Optional[str] = None,
-    spreadsheet_id: Optional[str] = None,
-    cached: bool = True
+    spreadsheet_id: Optional[str] = None
 ) -> Sheet:
     """
     Returns a Sheet object representing the sheet with the given name in the given spreadsheet.
 
     If sheet_name is None, the first sheet in the spreadsheet is returned.
-    If spreadsheet_id is None, the spreadsheet_id ID is retrieved from the command line arguments. (NOT IMPLEMENTED)
-    If cached is True, the sheet is cached so that subsequent calls to this function with the same
-    sheet name and ID will return the same Sheet object.
+    If spreadsheet_id is None, the spreadsheet_id ID is retrieved from the command line arguments. (NOT IMPLEMENTED).
     """
-    sheet_key = f"{spreadsheet_id}_{sheet_name}"
-    
 
     sheets_api = get_sheets_api()
 
@@ -251,12 +252,11 @@ def _spreadsheet_range(
 
 
 def get_sheets_api():
-    if "sheets_api" not in cache:
-        credentials = authenticate_service()
-        service = build("sheets", "v4", credentials=credentials)
-        cache["sheets_api"] = service.spreadsheets()
+    credentials = authenticate_service()
+    service = build("sheets", "v4", credentials=credentials)
+    sheets_api = service.spreadsheets()
 
-    return cache["sheets_api"]
+    return sheets_api
 
 
 def clean(value: str) -> str:
@@ -271,3 +271,93 @@ def _is_ascii_digit(value: str) -> bool:
     This function returns True only for strings containing digits 0-9.
     """
     return bool(re.match(r'^[0-9]+$', value))
+
+def create_text_cell(text):
+    field = {"userEnteredValue": {}}
+    field["userEnteredValue"]["stringValue"] = text
+
+    return field
+
+def create_number_cell(num: Optional[int] = None):
+    if isinstance(num, int):
+        return {
+            "userEnteredValue": {
+                "numberValue": num
+            }
+        }
+    else:
+        return {
+            "userEnteredValue": {
+                "formulaValue": num
+            }
+        }
+
+def create_dropdown_cell(initial_content: Union[str, int]):
+        priority_options = get_args(TaskPriority)
+        print(f"Priority options: {priority_options}")
+        values = [{"userEnteredValue": option} for option in priority_options]
+        return {
+            "dataValidation": {
+                "condition": {
+                    "type": "ONE_OF_LIST",
+                    "values": values,
+                },
+                "showCustomUi": True,
+            },
+            "userEnteredValue": {
+                "stringValue": initial_content,
+            },
+        }
+
+def update_existing_task_issue_ids(existing_epic: Epic, new_epic: Epic, old_value: str) -> None:
+    """
+    Copies issueID from existing tasks to new tasks if the title matches oldValue.
+    """
+    print("Updating task")
+    for item in existing_epic.tasks:
+        for task in new_epic.tasks:
+            if old_value == item.title:
+                task.issueID = item.issueID
+
+async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
+    """
+    Handles a webhook event from a Google Sheet.
+
+    Args:
+        payload (dict): The payload of the webhook event.
+    """
+
+    payload = await request.json()
+    db = request.app.state.db
+
+    async def handle_epic():
+        sheet_epic = db.parse_sheet(payload)
+        existing_epic = db.get_epic(sheet_epic.title)
+
+        if existing_epic is None:
+            db.create_epic(sheet_epic.model_dump(mode='json'))
+            await plugin.post_to_plugin(sheet_epic, "setup")
+        else:
+            if payload.get("sheetName") == "Tasks":
+                update_existing_task_issue_ids(existing_epic, sheet_epic, payload.get("oldValue"))
+                
+            db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
+            await plugin.post_to_plugin(sheet_epic, "update")
+        
+    async def handle_user():
+        user = payload.get("user")
+        print(f"User: {user}")
+
+        if user["nickname"] and user["email"] is not None:
+            existing_user = db.get_all_users(user["nickname"])
+            if existing_user is None:
+                db.create_user(user)
+                print(f"Created new user: {user["nickname"]}")
+            else:
+                print(f"User {user["nickname"]} already exists")
+        else:
+            return {"status": 400, "message": "User has no nickname or email"}
+
+    # Run both functions concurrently. Check for epics and users.
+    await asyncio.gather(handle_epic(), handle_user())
+    return {"status": 200, "message": "DB updated Succesfully"}

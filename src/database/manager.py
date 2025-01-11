@@ -1,8 +1,11 @@
+import re
+
 from database import initfirebase
-from database.models import Epic, Task
+from database.models import Epic, Task, User
 from typing import Optional, Dict, Any, List, Union
 from fastapi import HTTPException
 from Google import sheets
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from firebase_functions.firestore_fn import (
   on_document_created,
@@ -13,57 +16,17 @@ from firebase_functions.firestore_fn import (
   Change,
   DocumentSnapshot,
 )
-
-#Maybe more of a document manager than a database manager but I'm not sure what to call it
+# TODO: fuck doc_ref. Make all endpoints initialize doc_ref based on argument parameter.
+# TODO: Refactor DatabaseManager class, such that references are dynamícally passed from function caller.
 class DatabaseManager:
-    def __init__(self, db_collection, db_document: Optional[str]) -> None:
+    def __init__(self, db_collection, db_document: Optional[str] = None) -> None:
         self.db = initfirebase()
         self.db_collection = db_collection
         self.db_document = db_document
-        self.doc_ref = self.db.collection(self.db_collection).document(self.db_document)
-        
-    def fetch_database(self):
-        """
-        Fetches a document from a specified Firestore collection.
-        Returns:
-            dict: The document data as a dictionary if the document exists.
-            None: If the document does not exist or an error occurs.
-        """
-        try:
-            doc = self.doc_ref.get()
-            if doc.exists:
-                data = doc.to_dict()
-                return data
-                #return json.dumps(data, indent=4)
-            else:
-                print(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
-                return None
-        except Exception as e:  # Catch any exceptions
-            print(f"An error occurred: {e}")
-            return None
-    
-    @on_document_updated(document="epics/MVP for TrackPoint")
-    def db_event_listener(self, event: Event[Change[DocumentSnapshot]]) -> None:
-        print(f"Change detected on document {event.params['title']}")
-
-        change = event.data
-        if change.before.exists:
-            before_data = change.before.to_dict()
-        else:
-            before_data = {}
-
-        if change.after.exists:
-            after_data = change.after.to_dict()
-        else:
-            after_data = {}
-
-        changed_fields = {k: after_data[k] for k in after_data if before_data.get(k) != after_data.get(k)}
-
-        print(f"Changed fields: {changed_fields}")
-        return changed_fields
+        self.doc_ref = self.db.collection(self.db_collection).document(self.db_document) if db_document else None
 
 
-    def add_task(self, task: Dict[str, Any]) -> None:
+    def add_task(self, task: Task, epic_id: str) -> None:
         """
         Adds a new task to the 'tasks' list within the Firestore document.
         Args:
@@ -72,19 +35,20 @@ class DatabaseManager:
             None
         """
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                tasks.append(task)
-                self.doc_ref.update({'tasks': tasks})
-                print(f"Task added successfully to document '{self.db_document}' in collection '{self.db_collection}'!")
+                tasks.append(task.model_dump(mode='json'))
+                doc_ref.update({'tasks': tasks})
+                print(f"Task added successfully to document '{epic_id}' in collection '{self.db_collection}'!")
             else:
                 raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(e)
         
-    def update_task(self, task_identifier, updated_task):
+    def update_task(self, task: Task, epic_id: str) -> None:
         """
         Updates a specific task in the 'tasks' list within a Firestore document.
         Args:
@@ -96,38 +60,40 @@ class DatabaseManager:
             Exception: If an error occurs during the update operation, it will be caught and printed.
         """
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
             
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                
+    
                 task_found = False
 
-                for task in tasks:
-                    if (isinstance(task_identifier, int) and task.get('issueID') == task_identifier) or \
-                        (isinstance(task_identifier, str) and task.get('title') == task_identifier):
-                        task.update({k: v for k, v in updated_task.items() if v is not None})
+                for item in tasks:
+                    if (isinstance(task.issueID, int) and item.get('issueID') == task.issueID) or \
+                        (isinstance(task.title, str) and item.get('title') == task.title):
+                        item.update(task.model_dump(mode='json'))
                         task_found = True
                         break
                 
                 if not task_found:
-                    print(f"Task with title: '{task_identifier}' not found.")
+                    print(f"Task with title: '{task.title}' not found.")
                     return None
                 
                 self.doc_ref.update({'tasks': tasks})
-                print(f"Task '{task_identifier}' updated successfully!")
+                print(f"Task '{task.title}' updated successfully!")
             else:
-                raise Exception("No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(f"Error with writing to Google Cloud: {e}")
         
-    def get_task(self, task_identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def get_task(self, task_identifier: Union[int, str], epic_id: str ) -> Optional[Dict[str, Any]]:
         """
-        Fetch specific task from Firestore document based on the task_identifier.
+        Fetch specific task from Firestore document based on the task_identifier. Or return all tasks if no identifier is provided.
 
         Args:
-            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (task_id) or a string (task_title).
+            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (issueID) or a string (task_title).
+            epic_id (str): The title of the epic. 
         Returns:
             dict: The task data as a dictionary if the task exists.
             None: If the task does not exist or an error occurs.
@@ -139,17 +105,19 @@ class DatabaseManager:
             raise ValueError("task_identifier must be an integer or a string")
         
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
+
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data['tasks']
                 for task in tasks:
                     if (isinstance(task_identifier, int) and task['issueID'] == task_identifier) or \
                        (isinstance(task_identifier, str) and task['title'] == task_identifier):
-                        return task
+                        return Task(**task)
                 return None
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
         except Exception as e:  # Catch any exceptions
             print(f"An error occurred: {e}")
             return None
@@ -174,7 +142,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(e)
         
-    def delete_task(self, task_identifier: Union[int, str]) -> None:
+    def delete_task(self, task: Task, epic_id: str) -> None:
         """
         Deletes a specific task from the 'tasks' list within the Firestore document.
         Args:
@@ -185,20 +153,29 @@ class DatabaseManager:
             ValueError: If task_identifier is neither an integer nor a string.
             Exception: If an error occurs during the delete operation, it will be caught and printed.
         """
-        if not isinstance(task_identifier, (int, str)):
-            raise ValueError("task_identifier must be an integer or a string")
-        
+
+        print(f"Deleting task with title: '{task.title}' from document '{epic_id}' in collection '{self.db_collection}'...")
+
+        doc_ref = self.db.collection(self.db_collection).document(epic_id)
         try:
-            doc = self.doc_ref.get()
+            doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                tasks = [task for task in tasks if not ((isinstance(task_identifier, int) and task['issueID'] == task_identifier) or 
-                                                        (isinstance(task_identifier, str) and task['title'] == task_identifier))]
-                self.doc_ref.update({'tasks': tasks})
-                print(f"Task with identifier '{task_identifier}' deleted successfully from document '{self.db_document}' in collection '{self.db_collection}'!")
+
+                updated_tasks = []
+                for t in tasks:
+                    # t is a dict from Firestore, task is a Task model
+                    if (isinstance(task.issueID, int) and t.get('issueID') == task.issueID) \
+                            or (isinstance(task.title, str) and t.get('title') == task.title):
+                        # Skip to "delete" task
+                        continue
+                    updated_tasks.append(t)
+
+                doc_ref.update({'tasks': updated_tasks})
+                print(f"Task with identifier '{task.title}' deleted successfully from document '{self.db_document}' in collection '{epic_id}'!")
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
         except Exception as e:
             print(f"An error occurred: {e}")
     
@@ -222,16 +199,32 @@ class DatabaseManager:
         except Exception as e:  
             raise Exception(e)
         
-    def get_epic(self, epic_title):
+    def get_epic(self, epic_title: str = None, identifier: str = None) -> Epic:
+        """Retreive an epic from the Firestore database based on the epic_title or identifier."""
         try:
-            doc_ref = self.db.collection(self.db_collection).document(epic_title)
-
-            doc = doc_ref.get()
-            if doc.exists:
-                return doc.to_dict()
-            else:
-                print(f"No such document '{epic_title}' in collection '{self.db_collection}'")
+            if epic_title:
+                doc_ref = self.db.collection(self.db_collection).document(epic_title)
+                doc = doc_ref.get()
+                if doc.exists:
+                    doc = doc.to_dict()
+                    return Epic(**doc)
+                else:
+                    print(f"No such document '{epic_title}' in collection '{self.db_collection}'")
+                    return None
+            elif identifier:
+                query = (
+                    self.db.collection(self.db_collection)
+                    .where(filter=FieldFilter("repoName", "==", identifier))
+                    .limit(1))
+                docs = query.stream()
+                for doc in docs:
+                    if doc.exists:
+                        doc = doc.to_dict()
+                        return Epic(**doc)
+                print(f"No document with repoName '{identifier}' found in collection '{self.db_collection}'")
                 return None
+            else:
+                raise ValueError("Either epic_title or identifier must be provided.")
         except Exception as e:  
             raise Exception(e)
     
@@ -247,12 +240,12 @@ class DatabaseManager:
         
     def update_epic(self, epic_title, epic_data):
         try:
-            self.db.collection(self.db_collection).document(epic_title).set(epic_data)
+            self.db.collection(self.db_collection).document(epic_title).update(epic_data)
             print(f"Document '{epic_title}' in collection '{self.db_collection}' updated successfully!")
         except Exception as e:  
             raise Exception(e)
     
-    def parse_sheet(self, spreadsheet_id: str) -> Epic:
+    def parse_sheet(self, payload: dict) -> Epic:
         """
         Parses a Google Sheet into an Epic object.
         Args:
@@ -261,14 +254,14 @@ class DatabaseManager:
             Epic: The parsed Epic object.
         """
 
-        # Retrieve data from 'Epic' and 'Tasks' sheets.
-        epic_sheet = sheets.get_sheet("Epic", spreadsheet_id)
-        tasks_sheet = sheets.get_sheet("Tasks", spreadsheet_id)
+        # Retrieve data from 'Epic' and 'Tasks' sheets respectively.
+        epic_sheet = sheets.get_sheet("Epic", payload.get("spreadsheetId"))
+        tasks_sheet = sheets.get_sheet("Tasks", payload.get("spreadsheetId"))
 
         task_list = []
 
         # Transform the data from the 'Epic' sheet into an 'Epic' object.
-        epic_data = sheets.transform_to_epics(epic_sheet)
+        epic_data = sheets.transform_to_epics(epic_sheet, payload)
         
         # Transform the data from the 'Tasks' sheet into a list of 'Task' objects.
         if epic_data:
@@ -278,7 +271,105 @@ class DatabaseManager:
                     task_list.append(task_object)
             epic_data.tasks = task_list
 
+        user = User(
+            name=payload.get("user").get("nickname"),
+            email=payload.get("user").get("email"),
+            epics=[epic_data.title]
+        )
+
+        epic_data.users.append(user) 
+
         # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
         #print(epic_data.model_dump(mode='json'))
 
         return epic_data
+    
+    def parse_user(self, payload: dict) -> User:
+        """
+        Parses a user from a payload.
+        Args:
+            payload (dict): The payload data to be parsed.
+        Returns:
+            User: The parsed User object.
+        """
+        user_data = payload.get("user")
+        user = User(
+            name=user_data.get("nickname"),
+            email=user_data.get("email"),
+            role=user_data.get("role"),
+            uID=user_data.get("uID")
+        )
+        return user
+
+    
+    def create_user(self, payload: dict) -> None:
+        try:
+            user = self.parse_user(payload)
+            doc_ref = self.db.collection("users").document()
+            doc_ref.set(user.model_dump(mode='json'))
+            print(f"Document '{user.name}' in collection 'users' added successfully!"
+                  f"\nUser ID: '{doc_ref.id}'")
+            user.uID = doc_ref.id
+            doc_ref.set(user.model_dump(mode='json'))
+        except Exception as e:  
+            raise Exception(e)
+        
+    def get_user(self, user_name):
+        try:
+            doc_ref = self.db.collection("users").where("name", "==", user_name)
+
+            doc = doc_ref.get()
+            if doc is not None:
+                return doc.to_dict()
+            else:
+                print(f"No such document '{user_name}' in collection '{self.db_collection}'")
+                return None
+        except Exception as e:  
+            raise Exception(e)
+
+    def get_all_users(self, user: Optional[str] = None):
+        try:
+            if user is None:
+                docs = self.db.collection("users").stream()
+                users = []
+                for doc in docs:
+                    users.append(doc.id)
+                return users
+            else:
+                query = (self.db.collection("users").where(filter=FieldFilter("name", "==", user))).stream()
+                for doc in query:
+                    user_data = doc.to_dict()
+                    user_data['id'] = doc.id
+                    return user_data
+        except Exception as e:  
+            raise Exception(e)
+        
+    @staticmethod
+    def parse_body(body: str) -> dict:
+        """Parse the body text and extract values for Task attributes."""
+        task_data = {
+            'description': None,
+            'priority': None,
+            'story_point': None,
+            'comments': None
+        }
+        body = body.replace('**', '')  # Escape markdown characters
+        
+        # Regular expressions to extract values
+        patterns = {
+            'description': r'Description:\s*(.*)',
+            'priority': r'Priority:\s*(.*)',
+            'story_point': r'Story Point:\s*(\d+)',
+            'comments': r'Comments:\s*(.*)'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, body)
+            if match:
+                value = match.group(1).strip()
+                if key == 'story_point':
+                    task_data[key] = int(value)  # Convert story_point to int
+                else:
+                    task_data[key] = value
+        
+        return task_data

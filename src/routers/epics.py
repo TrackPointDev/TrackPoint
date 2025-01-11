@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, Request, HTTPException, Header
 
 from database.manager import DatabaseManager
 from database.models import Epic
@@ -12,6 +12,11 @@ router = APIRouter(
 )
 
 db = DatabaseManager("epics", "showcase")
+
+class EpicManager:
+    def __init__(self, request: Request):
+        self.client = request.app.state.client
+        self.logger = request.app.state.logger
 
 @router.post("")
 async def create_epic(epic: Epic):
@@ -28,6 +33,7 @@ async def create_epic(epic: Epic):
     try:
         db.create_epic(epic.model_dump(mode='json'))
     except Exception as e:
+        router.app.state.logger.error(f"An error occurred: {e}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
     return {"status": 200, "message": f"Epic with title {epic.title} created successfully."}
@@ -47,7 +53,7 @@ async def get_epics(epicTitle: Annotated[str | None, Header()] = None):
     if epicTitle:
         try:
             epic = db.get_epic(epicTitle)
-            return epic if epic else {"status": 404, "message": "Epic not found."}
+            return epic.model_dump(mode='json') if epic else {"status": 404, "message": "Epic not found."}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
     try:

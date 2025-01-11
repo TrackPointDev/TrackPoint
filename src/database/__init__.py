@@ -1,5 +1,3 @@
-import os.path
-
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -13,11 +11,7 @@ def initfirebase():
     """
 
     # With Google Secret Manager
-    project_id = "trackpointdb"
-    secret_id = "firebase_creds"
-    version_id = "latest"
-    cred = credentials.Certificate(access_secret_version_json(project_id, secret_id, version_id))
-    
+    cred = credentials.Certificate(access_secret_version_json("trackpointdb", "firebase_creds", "latest"))
     try:
         # Try to get the default app
         app = firebase_admin.get_app()
