@@ -122,7 +122,7 @@ class DatabaseManager:
             print(f"An error occurred: {e}")
             return None
         
-    def get_tasks_list(self) -> List:
+    def get_tasks_list(self, epic_id: str) -> List:
         """
         Retrieves entire list of 'tasks' from the Firestore document.
         Args:
@@ -131,14 +131,15 @@ class DatabaseManager:
             None
         """
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
                 print(f"Successfully retreived task list from document '{self.db_document}' in collection '{self.db_collection}'!")
                 return tasks
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(e)
         

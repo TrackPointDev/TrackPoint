@@ -60,7 +60,12 @@ class TaskHandler:
             if isinstance(taskID, str) and taskID.isdigit():
                 taskID = int(taskID)
             try:
-                return self.db.get_task(taskID)
+                if not taskID:
+                    return self.db.get_tasks_list(taskID, epicID)
+                elif taskID:
+                    return self.db.get_task(taskID, epicID)
+                else:
+                    raise HTTPException(status_code=404, detail="Plaease provide a valid task ID.")
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
         try:
