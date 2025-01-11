@@ -11,6 +11,7 @@ class Task(BaseModel):
     issueID: Optional[int] = Field(None, description="The issue ID associated with the task.")
     priority: Optional[TaskPriority] = Field(None, description="The priority level of the task.")
     story_point: Optional[int] = Field(None, description="The story points assigned to the task.")
+    taskID: Optional[int] = Field(None, description="The task ID of the task.")
     #story_point_bid: Optional[int] = Field(None, description="The story points bid for the task.")
     #status: Optional[str] = Field(None, description="The status of the task.")
     #asignees: Optional['User'] = Field(None, description="The user assigned to the task.")

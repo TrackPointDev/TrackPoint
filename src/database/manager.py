@@ -34,6 +34,7 @@ class DatabaseManager:
         Returns:
             None
         """
+        print(f"lll {epic_id}")
         try:
             doc_ref = self.db.collection(self.db_collection).document(epic_id)
             doc = doc_ref.get()
@@ -131,12 +132,13 @@ class DatabaseManager:
             None
         """
         try:
+            print(f"Retrieving task list from document '{epic_id}' in collection '{self.db_collection}'...")
             doc_ref = self.db.collection(self.db_collection).document(epic_id)
             doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                print(f"Successfully retreived task list from document '{self.db_document}' in collection '{self.db_collection}'!")
+                print(f"Successfully retreived task list from document '{epic_id}' in collection '{self.db_collection}'!")
                 return tasks
             else:
                 raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")

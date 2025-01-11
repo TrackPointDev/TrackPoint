@@ -87,7 +87,7 @@ class SheetUtils:
         # Encapsulate all request actions in a single list.
         return [append_cells_request, update_dimension_request]
     
-    def update_task_row_request(self, task: Task, spreadsheetID: str):
+    def update_task_row_request(self, oldtask: str, task: Task, spreadsheetID: str):
         """
         Builds a list of update requests for several columns for an existing profile row in the Sheets document.
         Retries the operation if a required column is added dynamically.
@@ -98,7 +98,7 @@ class SheetUtils:
         sheet = get_sheet(sheet_name, spreadsheetID)
 
         for i, row in enumerate(sheet.rows, start=1):
-            if row["title"] == task.title:
+            if row["title"] == oldtask:
                 row_index = i
                 break
 
