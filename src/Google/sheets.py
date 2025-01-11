@@ -220,8 +220,6 @@ def get_sheet(
     If spreadsheet_id is None, the spreadsheet_id ID is retrieved from the command line arguments. (NOT IMPLEMENTED).
     """
 
-    print(f"Getting sheet {sheet_name} from spreadsheet {spreadsheet_id}")
-
     sheets_api = get_sheets_api()
 
     spreadsheet_range = _spreadsheet_range(sheet_name=sheet_name)

@@ -83,20 +83,18 @@ class TaskHandler:
         """
 
         try:
-            print("retrieving epic...")
+            # retreive the epic associated with the task.
             epic = self.db.get_epic(identifier=epicID)
-            print(f"Got epic with title: {epic.title}")
-            print("updating task in db...")
             self.db.update_task(task, epic.title)
-            print("updating task in sheet...")
+            
             self.sheet.update_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
-        return {"message": "Task updated"}
+        return {"status": 200, "message": f"Task updated successfully. Updated DB in Epic '{epic.title} and updated in sheet.'"}
 
     @router.delete("/delete")
-    async def delete_task(self, taskID: Annotated[int | str, Header()]):
+    async def delete_task(self, task: Task = None, epicID: Annotated[str, Header()] = None):
         """
         Delete a specific task in the Firestore database.
 
@@ -108,10 +106,11 @@ class TaskHandler:
             HTTPException: If an error occurs during the delete operation, it will be caught and a 500 error will be raised.
         """
 
-        if isinstance(taskID, str) and taskID.isdigit():
-            taskID = int(taskID)
         try:
-            self.db.delete_task(taskID)
+            # retreive the epic associated with the task.
+            epic = self.db.get_epic(identifier=epicID)
+            #self.db.delete_task(task, epic.title)
+            self.sheet.remove_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 

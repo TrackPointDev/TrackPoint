@@ -51,7 +51,7 @@ app.include_router(epics.router)
 app.include_router(tasks.router)
 app.include_router(users.router) 
 
-@app.post("/")
+@app.post("/", tags=["Root"])
 async def root(request: Request = None):
     payload = await request.json()
     request.app.state.logger.info(f"Received payload: {payload}")

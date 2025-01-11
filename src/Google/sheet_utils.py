@@ -38,7 +38,7 @@ class SheetUtils:
     def update_task(self, task: Task, spreadsheetID: str):
         """Method for updating a task in the Google Sheets document."""
 
-        body = self.build_update_task_request(task, spreadsheetID)
+        body = self.update_task_row_request(task, spreadsheetID)
         self.update_sheets_data(body, "updating task", spreadsheetID)
 
     def build_new_task_row_request(self, task: Task, spreadsheetID: str) -> list[dict]:
@@ -46,8 +46,8 @@ class SheetUtils:
         Builds the list of request bodies for adding a new task row in the Sheets document.
         The row will have data validation - that is, drop-downs and checkboxes.
 
-        :param profile: The task to add.
-        :param campaign_type: The type of campaign the profile is being added to.
+        :param task: The task to add.
+        :param spreadsheetID: The ID of the spreadsheet.
         :return: List of dictionaries, each dict being a request to Google Sheets API.
         """
         
@@ -87,7 +87,7 @@ class SheetUtils:
         # Encapsulate all request actions in a single list.
         return [append_cells_request, update_dimension_request]
     
-    def update_profile_row_request(self, task: Task, spreadsheetID: str):
+    def update_task_row_request(self, task: Task, spreadsheetID: str):
         """
         Builds a list of update requests for several columns for an existing profile row in the Sheets document.
         Retries the operation if a required column is added dynamically.
@@ -98,10 +98,13 @@ class SheetUtils:
         sheet = get_sheet(sheet_name, spreadsheetID)
 
         for i, row in enumerate(sheet.rows, start=1):
-            if row[i] == task.title:
+            if row["title"] == task.title:
                 row_index = i
                 break
 
+        if row_index is None:
+            raise Exception(f"Row with title '{task.title}' not found in sheet '{sheet_name}'")
+    
         header_data = {
             "title": task.title,
             "duplicate / comments": task.comments,
@@ -113,6 +116,7 @@ class SheetUtils:
 
         column_indexes = self.find_column_indexes(sheet, header_data.keys())
 
+        print(f"Updating task '{task.title}' in row {row_index}...")
         update_requests = []
         for header_name, data in header_data.items():
             column_index = column_indexes.get(header_name, None)
@@ -120,7 +124,6 @@ class SheetUtils:
                 continue
 
             user_entered_value = {}
-            cell_format = {}
             if isinstance(data, int):
                 user_entered_value["numberValue"] = data
             else:
@@ -129,9 +132,9 @@ class SheetUtils:
             update_requests.append({
                 "updateCells": {
                     "rows": [{
-                        "values": [{"userEnteredValue": user_entered_value, "userEnteredFormat": cell_format}]
+                        "values": [{"userEnteredValue": user_entered_value}]
                     }],
-                    "fields": "userEnteredValue,userEnteredFormat.numberFormat",
+                    "fields": "userEnteredValue",
                     "start": {
                         "sheetId": sheet_id,
                         "rowIndex": row_index,
@@ -248,11 +251,44 @@ class SheetUtils:
         Finds the column indexes for the specified header names in the given sheet.
         Returns a dictionary mapping header names to their column indexes.
         """
+        print(f"Finding column indexes for headers: {header_names}")
         column_indexes = {}
         for i, header in enumerate(sheet.headers, start=1):
             if header.lower() in header_names:
                 column_indexes[header.lower()] = i
         return column_indexes
     
+    def remove_task(self, task: Task, spreadsheetID: str):
+        """Removes the given tasks from the sheet."""
+        if not task:
+            return
+
+        row = self.get_row_with_task(task, spreadsheetID)
+        delete_row_requests = self.delete_row_request(row, spreadsheetID) 
+
+        get_sheets_api().batchUpdate(
+            spreadsheetId=spreadsheetID,
+            body={"requests": delete_row_requests}
+        ).execute()
+
+
+    def delete_row_request(self, row, spreadsheetID: str) -> dict:
+        """Returns a request body for deleting a row."""
+        sheet_id = self.get_sheet_id_by_name("Tasks", spreadsheetID=spreadsheetID)
+
+        return {
+            "deleteDimension": {
+                "range": {
+                    "sheetId": 0 if sheet_id is None else sheet_id,
+                    "dimension": "ROWS",
+                    "startIndex": row - 1,
+                    "endIndex": row
+                }
+            }
+        }
+    
+    def get_row_with_task(self, task: Task, spreadsheetID: str = None):
+        """Returns the row number of the given task, or raises IndexError if it doesn't exist."""
+        return get_sheet(sheet_name="Tasks", spreadsheet_id=spreadsheetID).row_index("title", task.title)
     
 

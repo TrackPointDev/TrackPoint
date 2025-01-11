@@ -87,12 +87,13 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error with writing to Google Cloud: {e}")
         
-    def get_task(self, task_identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def get_task(self, task_identifier: Union[int, str], epic_id: str ) -> Optional[Dict[str, Any]]:
         """
-        Fetch specific task from Firestore document based on the task_identifier.
+        Fetch specific task from Firestore document based on the task_identifier. Or return all tasks if no identifier is provided.
 
         Args:
-            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (task_id) or a string (task_title).
+            task_identifier (Union[int, str]): The unique identifier of the task, either an integer (issueID) or a string (task_title).
+            epic_id (str): The title of the epic. 
         Returns:
             dict: The task data as a dictionary if the task exists.
             None: If the task does not exist or an error occurs.
@@ -104,7 +105,9 @@ class DatabaseManager:
             raise ValueError("task_identifier must be an integer or a string")
         
         try:
-            doc = self.doc_ref.get()
+            doc_ref = self.db.collection(self.db_collection).document(epic_id)
+            doc = doc_ref.get()
+
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data['tasks']
@@ -114,7 +117,7 @@ class DatabaseManager:
                         return Task(**task)
                 return None
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
         except Exception as e:  # Catch any exceptions
             print(f"An error occurred: {e}")
             return None
@@ -139,7 +142,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(e)
         
-    def delete_task(self, task_identifier: Union[int, str]) -> None:
+    def delete_task(self, task: Task, epic_id: str) -> None:
         """
         Deletes a specific task from the 'tasks' list within the Firestore document.
         Args:
@@ -150,20 +153,29 @@ class DatabaseManager:
             ValueError: If task_identifier is neither an integer nor a string.
             Exception: If an error occurs during the delete operation, it will be caught and printed.
         """
-        if not isinstance(task_identifier, (int, str)):
-            raise ValueError("task_identifier must be an integer or a string")
-        
+
+        print(f"Deleting task with title: '{task.title}' from document '{epic_id}' in collection '{self.db_collection}'...")
+
+        doc_ref = self.db.collection(self.db_collection).document(epic_id)
         try:
-            doc = self.doc_ref.get()
+            doc = doc_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
-                tasks = [task for task in tasks if not ((isinstance(task_identifier, int) and task['issueID'] == task_identifier) or 
-                                                        (isinstance(task_identifier, str) and task['title'] == task_identifier))]
-                self.doc_ref.update({'tasks': tasks})
-                print(f"Task with identifier '{task_identifier}' deleted successfully from document '{self.db_document}' in collection '{self.db_collection}'!")
+
+                updated_tasks = []
+                for t in tasks:
+                    # t is a dict from Firestore, task is a Task model
+                    if (isinstance(task.issueID, int) and t.get('issueID') == task.issueID) \
+                            or (isinstance(task.title, str) and t.get('title') == task.title):
+                        # Skip to "delete" task
+                        continue
+                    updated_tasks.append(t)
+
+                doc_ref.update({'tasks': updated_tasks})
+                print(f"Task with identifier '{task.title}' deleted successfully from document '{self.db_document}' in collection '{epic_id}'!")
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
         except Exception as e:
             print(f"An error occurred: {e}")
     
