@@ -33,8 +33,8 @@ class TaskHandler:
         print(f"Received task: {task_json}")
 
         try:
-            self.db.add_task(task, epicID)
             epic = self.db.get_epic(identifier=epicID)
+            self.db.add_task(task, epic.title)
             print("Writing to sheet...")
             self.sheet.add_task(task, spreadsheetID=epic.spreadsheetId)
         except Exception as e:
@@ -55,21 +55,14 @@ class TaskHandler:
             HTTPException: If an error occurs during the fetch operation, it will be caught and a 500 error will be raised.
         """
 
-        if taskID:
-            # For some reason, headers are casted to strings even when an int is passed. This is a workaround.
-            if isinstance(taskID, str) and taskID.isdigit():
-                taskID = int(taskID)
-            try:
-                if not taskID:
-                    return self.db.get_tasks_list(taskID, epicID)
-                elif taskID:
-                    return self.db.get_task(taskID, epicID)
-                else:
-                    raise HTTPException(status_code=404, detail="Plaease provide a valid task ID.")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
         try:
-            return self.db.get_tasks_list()
+            epic = self.db.get_epic(identifier=epicID)
+            if taskID is None:
+                return self.db.get_tasks_list(epic.title)
+            elif taskID is not None:
+                return self.db.get_task(taskID, epic.title)
+            else:   
+                raise HTTPException(status_code=404, detail="Please provide a valid task ID.")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
@@ -90,8 +83,7 @@ class TaskHandler:
         try:
             # retreive the epic associated with the task.
             epic = self.db.get_epic(identifier=epicID)
-            self.db.update_task(task, epic.title)
-            
+            self.db.update_task(task.issueID, epic.title)
             self.sheet.update_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
@@ -114,7 +106,7 @@ class TaskHandler:
         try:
             # retreive the epic associated with the task.
             epic = self.db.get_epic(identifier=epicID)
-            #self.db.delete_task(task, epic.title)
+            self.db.delete_task(task, epic.title)
             self.sheet.remove_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
