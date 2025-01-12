@@ -60,11 +60,11 @@ class DatabaseManager:
                 tasks = data.get('tasks', [])
     
                 task_found = False
-
-                for item in tasks:
-                    if (task.taskID is not None and item.get("taskID") == task.taskID):
-                        print(f"DB taskID: {item.get("taskID")}, New taskID: {task.taskID}")
-                        item = task.model_dump(mode='json') 
+                for i, existing_task in enumerate(tasks):
+                    if (task.taskID is not None and existing_task.get("taskID") == task.taskID):
+                        print(f"DB taskID: {existing_task.get('taskID')}, New taskID: {task.taskID}")
+                        tasks[i] = task.model_dump(mode='json')
+                        print(f"New, updated task")
                         task_found = True
                         break
 
