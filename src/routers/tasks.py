@@ -28,8 +28,7 @@ class TaskHandler:
         Returns:
             dict: A dictionary containing the status and message of the operation.
         """
-        task_json = task.model_dump(mode='json')
-        print(f"Received task: {task_json}")
+        self.logger.info(f"Create task endpoint invoked! \n Package: '{task.model_dump(mode='json')}' Header: '{epicID}'")
 
         try:
             epic = self.db.get_epic(identifier=epicID)
@@ -84,13 +83,17 @@ class TaskHandler:
         """
 
         task = await self.extract_task(request)
-        print(f"Task to be updated: {task.model_dump(mode='json')}")
+        self.logger.info(f"Update task endpoint invoked! \n Package: '{task.model_dump(mode='json')}' Header: '{epicID}'")
 
         try:
             # retreive the epic associated with the task.
+            self.logger.info(f"Retrieving epic with ID: {epicID}")
             epic = self.db.get_epic(identifier=epicID)
+
+            self.logger.info(f"Updating task: '{task.title}' in epic: '{epic.title}'")
             self.db.update_task(task, epic.title)
-            print("Updating sheet task...")
+
+            self.logger.info(f"Database updated successfully. Updating sheet with task: '{task.title}' and ID: '{epic.spreadsheetId}'")
             self.sheet.update_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")

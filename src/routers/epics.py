@@ -2,7 +2,6 @@ from typing import Annotated, Union
 from fastapi import APIRouter, Request, HTTPException, Header
 from fastapi_utils.cbv import cbv
 
-from database.manager import DatabaseManager
 from database.models import Epic
 
 

@@ -10,7 +10,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-db = DatabaseManager("Users", None)
+db = DatabaseManager("Users")
 
 @router.post("")
 async def create_user(user: User):

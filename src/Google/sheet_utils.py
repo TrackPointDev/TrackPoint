@@ -104,7 +104,6 @@ class SheetUtils:
         header_data = {
             "title": task.title,
             "duplicate / comments": task.comments,
-            "issue id": task.issueID,
             "priority": task.priority,
             "description": task.description,
             "story point": task.story_point,

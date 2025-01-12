@@ -3,7 +3,7 @@ import re
 from database import initfirebase
 from database.models import Epic, Task, User
 from typing import Optional, Dict, Any, List, Union
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from Google import sheets
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -11,12 +11,9 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 # TODO: fuck doc_ref. Make all endpoints initialize doc_ref based on argument parameter.
 # TODO: Refactor DatabaseManager class, such that references are dynamícally passed from function caller.
 class DatabaseManager:
-    def __init__(self, db_collection, db_document: Optional[str] = None) -> None:
+    def __init__(self, db_collection: str) -> None:
         self.db = initfirebase()
         self.db_collection = db_collection
-        self.db_document = db_document
-        self.doc_ref = self.db.collection(self.db_collection).document(self.db_document) if db_document else None
-
 
     def add_task(self, task: Task, epic_id: str) -> None:
         """
@@ -26,7 +23,7 @@ class DatabaseManager:
         Returns:
             None
         """
-        print(f"lll {epic_id}")
+        print(f"Adding task with title '{task.title}' to epic '{epic_id}' in db...")
         try:
             doc_ref = self.db.collection(self.db_collection).document(epic_id)
             doc = doc_ref.get()
@@ -37,7 +34,7 @@ class DatabaseManager:
                 doc_ref.update({'tasks': tasks})
                 print(f"Task added successfully to document '{epic_id}' in collection '{self.db_collection}'!")
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(e)
         
@@ -56,6 +53,8 @@ class DatabaseManager:
             doc_ref = self.db.collection(self.db_collection).document(epic_id)
             doc = doc_ref.get()
 
+            print(f"Updating task with title: '{task.title}' in document '{epic_id}' in collection '{self.db_collection}'...")
+
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
@@ -63,8 +62,9 @@ class DatabaseManager:
                 task_found = False
 
                 for item in tasks:
-                    if (task.taskID is not None and item.get("issueID") == task.taskID):
-                        item.update(task.model_dump(mode='json'))
+                    if (task.taskID is not None and item.get("taskID") == task.taskID):
+                        print(f"DB taskID: {item.get("taskID")}, New taskID: {task.taskID}")
+                        item = task.model_dump(mode='json') 
                         task_found = True
                         break
 
@@ -72,10 +72,10 @@ class DatabaseManager:
                     print(f"Task with title: '{task.title}' not found.")
                     return None
                 
-                self.doc_ref.update({'tasks': tasks})
+                doc_ref.update({'tasks': tasks})
                 print(f"Task '{task.title}' updated successfully!")
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{self.db_collection}'")
+                raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")
         except Exception as e:
             raise Exception(f"Error with writing to Google Cloud: {e}")
         
@@ -169,9 +169,9 @@ class DatabaseManager:
                     updated_tasks.append(t)
 
                 doc_ref.update({'tasks': updated_tasks})
-                print(f"Task with identifier '{task.title}' deleted successfully from document '{self.db_document}' in collection '{epic_id}'!")
+                print(f"Task with identifier '{task.title}' deleted successfully from document '{epic_id}' in collection '{self.db_collection}'!")
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
+                raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")
         except Exception as e:
             print(f"An error occurred: {e}")
     
@@ -296,6 +296,8 @@ class DatabaseManager:
 
     
     def create_user(self, payload: dict) -> None:
+        if payload is None:
+            raise ValueError("Payload cannot be None.")
         try:
             user = self.parse_user(payload)
             doc_ref = self.db.collection("users").document()

@@ -184,7 +184,6 @@ def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
     Transforms a sheet into an Epic object.
     """
 
-    print(f"sheet columns: {sheet.headers}")
     title_index = 2
     problem_index = 3
     feature_index = 4
@@ -323,28 +322,40 @@ def create_dropdown_cell(initial_content: Union[str, int]):
             },
         }
 
-async def handle_task(db_epic: Epic, new_epic: Epic, request: Request, plugin: PluginManager) -> None:
+async def handle_task(db_epic: Epic, request: Request, plugin: PluginManager) -> None:
     payload = await request.json()
     db = request.app.state.db
+    logger = request.app.state.logger
 
     old_value = payload.get("oldValue")
     value = payload.get("value", None)
 
+    logger.info(f"Old value: {old_value}, New value: {value}")
+
     # If only old_value is provided (no 'value'), then delete that task from db and post to plugin
     if old_value and not value:
+        logger.info(f"No new value provided. Deleting task: '{old_value}'")
         for item in db_epic.tasks:
             if item.title == old_value:
+                logger.info(f"Found match in tasks between: '{item.title}' and '{old_value}' in epic: '{db_epic.title}'. Deleting...")
                 db.delete_task(item, db_epic.title)
-                await plugin.post_to_plugin(item, "task_delete")
+
+                logger.info(f"Task deleted successfully from db. Posting to plugin...")
+                await plugin.post_to_plugin(task=item, epic=db_epic, method="task_delete")
+                
                 return {"status": 200, "message": "Task deleted successfully."}
     elif old_value and value:
+        logger.info(f"New value provided. Updating task: '{old_value}' with new value: '{value}'")
         for item in db_epic.tasks:
             if item.title == old_value:
+                logger.info(f"Found match in tasks between: '{item.title}' and '{old_value}' in epic: '{db_epic.title}'. Updating...")
                 item.title = value
-                db.update_task(item.title, item.model_dump(mode='json'))
-                await plugin.post_to_plugin(db_epic, "update")
-        db.update_epic(new_epic.title, new_epic.model_dump(mode='json'))
-        await plugin.post_to_plugin(new_epic, "update_task")
+
+                print(f"Updating task: {item.title} with new values: {item.model_dump(mode='json')}")
+                db.update_task(item, db_epic.title)
+
+                logger.info(f"Task updated successfully in db. Posting to plugin...")
+                await plugin.post_to_plugin(task=item, epic=db_epic, method="task_update")
         return {"status": 200, "message": "Task updated successfully."}
 
 
@@ -355,23 +366,33 @@ async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
     Args:
         payload (dict): The payload of the webhook event.
     """
-
+    logger = request.app.state.logger
     payload = await request.json()
     db = request.app.state.db
 
     async def handle_epic():
         sheet_epic = db.parse_sheet(payload)
         db_epic = db.get_epic(sheet_epic.title)
+        logger.info(f"Parsed epic: '{sheet_epic.title}' from sheet: {sheet_epic.spreadsheetId}")
 
+        # If the epic does not exist in the database, create it and post to plugin
         if db_epic is None:
+            logger.info(f"Epic is not currently in DB. \nCreating new epic: {sheet_epic.title}")   
             db.create_epic(sheet_epic.model_dump(mode='json'))
-            await plugin.post_to_plugin(sheet_epic, "epic_setup")
+
+            logger.info(f"New epic created successfully. Posting to plugin...")
+            await plugin.post_to_plugin(epic=sheet_epic, method="epic_setup")
         else:
             if payload.get("sheetName") == "Tasks":
-                await handle_task(db_epic, sheet_epic, request, plugin)
+                logger.info(f"Detected change in task sheet. Updating epic: {db_epic.title}")
+                await handle_task(db_epic, request, plugin)
+
             elif payload.get("sheetName") == "Epic":
+                logger.info(f"Detected change in epic sheet. Updating epic: {db_epic.title}")
                 db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
-                await plugin.post_to_plugin(sheet_epic, "update_epic")
+
+                logger.info(f"Updated epic successfully. Posting changes to plugin...")
+                await plugin.post_to_plugin(sheet_epic, "epic_update")
         
     async def handle_user():
         user = payload.get("user")
