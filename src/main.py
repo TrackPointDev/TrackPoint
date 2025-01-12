@@ -26,7 +26,6 @@ async def lifespan(app: FastAPI):
     app.state.client = httpx.AsyncClient(timeout=120)
     app.state.db = DatabaseManager("epics")
     app.state.logger = logging.getLogger("uvicorn.error")
-
     app.state.logger.info("Setting up NGROK Tunnel.")
     ngrok.forward(5000, 
                   domain="native-koi-miserably.ngrok-free.app", 
@@ -49,13 +48,14 @@ app = FastAPI(title="TrackPoint-Backend",
               lifespan=lifespan)
 app.include_router(epics.router)
 app.include_router(tasks.router)
-app.include_router(users.router) 
+app.include_router(users.router)
 
 @app.post("/", tags=["Root"])
 async def root(request: Request = None):
     payload = await request.json()
     request.app.state.logger.info(f"Received payload: {payload}")
     plugin = PluginManager(app)
+    
 
     await sheets.handle_sheet_webhook_event(request, plugin)
     
@@ -63,7 +63,7 @@ async def root(request: Request = None):
 
 def main():
     try:
-        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info")
+        uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info", reload=True)
     except KeyboardInterrupt:
         print("Closing listener")
 

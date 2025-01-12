@@ -8,10 +8,10 @@ class Task(BaseModel):
     title: str = Field(..., description="The title of the task.")
     comments: Optional[str] = Field(None, description="Comments on the task.")
     description: Optional[str] = Field(None, description="A description of the task.")
-    issueID: Optional[int] = Field(None, description="The issue ID associated with the task.")
+    issueID: Optional[int] = Field(None, description="The github issue ID associated with the task.")
     priority: Optional[TaskPriority] = Field(None, description="The priority level of the task.")
     story_point: Optional[int] = Field(None, description="The story points assigned to the task.")
-    taskID: Optional[int] = Field(None, description="The task ID of the task.")
+    taskID: int = Field(..., description="The task ID of the task.")
     #story_point_bid: Optional[int] = Field(None, description="The story points bid for the task.")
     #status: Optional[str] = Field(None, description="The status of the task.")
     #asignees: Optional['User'] = Field(None, description="The user assigned to the task.")
@@ -26,7 +26,7 @@ class Epic(BaseModel):
 
     spreadsheetId: Optional[str] = Field(None, description="The spreadsheet ID of the epic.")
     secret: Optional[str] = Field("mysecretstring1234", description="A secret field.")
-    installationID: Optional[str] = Field("56537454", description="The installation ID of the epic.")
+    installationID: Optional[int] = Field(None, description="The installation ID of the epic.")
     repoOwner: Optional[str] = Field("TrackPointDev", description="The repository owner of the epic.")
     repoName: Optional[str] = Field("TrackPointTest", description="The repository name of the epic.")
 
