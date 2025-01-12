@@ -10,11 +10,14 @@ class PluginManager:
         self.app = app
         self.db = app.state.db
     
-    endpoint = Literal["setup", "update", "task", "test"]
+    endpoint = Literal["epic_setup", "epic_update", "epic_delete", "task_add", "task_update", "task_delete"]
     URLS: dict[endpoint, str] = {
-    "setup": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/setup",
-    "update": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/update",
-    "task": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/task/update",
+    "epic_setup": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/setup",
+    "epic_update": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/update",
+    "epic_delete": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/epic/delete",
+    "task_add": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/task/add",
+    "task_update": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/task/update",
+    "task_delete": "https://trackpoint-github-gcf-87527377987.europe-west3.run.app/task/delete",
     }
     async def post_to_plugin(self, payload: Union[Epic, Task], method: endpoint) -> Dict[str, Any]:
         client = self.app.state.client
@@ -32,7 +35,7 @@ class PluginManager:
         
         if isinstance(response, dict): # Sometimes response returns <Response [200 OK]> instead of a dict. This handles that.
             print(f"Response: {response.json()}")
-            self.assign_issue_id(response.json(), payload)
+            #self.assign_issue_id(response.json(), payload)
             return response.json()
         else:
             return {"status": 200, "message": response}

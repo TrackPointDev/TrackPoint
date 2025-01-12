@@ -287,10 +287,10 @@ class DatabaseManager:
         """
         user_data = payload.get("user")
         user = User(
-            name=user_data.get("nickname"),
-            email=user_data.get("email"),
-            role=user_data.get("role"),
-            uID=user_data.get("uID")
+            name=user_data.get("nickname", "Anonymous"),
+            email=user_data.get("email", None),
+            role=user_data.get("role", None),
+            uID=user_data.get("uID", "")
         )
         return user
 
