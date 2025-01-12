@@ -70,7 +70,7 @@ class TaskHandler:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
     @router.put("/update")
-    async def update_task(self, task: Task = None, epicID: Annotated[str, Header()] = None):
+    async def update_task(self, request: Request = None, epicID: Annotated[str, Header()] = None):
         """
         Updates a given task in the Firestore database.
 
@@ -82,6 +82,9 @@ class TaskHandler:
         Raises:
             HTTPException: If an error occurs during the update operation, it will be caught and a 500 error will be raised.
         """
+
+        task = await self.extract_task(request)
+        print(f"Task to be updated: {task.model_dump(mode='json')}")
 
         try:
             # retreive the epic associated with the task.
@@ -116,3 +119,25 @@ class TaskHandler:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
         return {"message": "Task deleted"}
+    
+    async def extract_task(self, request: Request) -> Task:
+        """
+        Extracts a Task object from the request body.
+
+        Args:
+            request (Request): The request object containing the task data.
+        Returns:
+            Task: The extracted Task object.
+        """
+        body = await request.json()
+        task_data = {
+            "title": body.get("title"),
+            "comments": body.get("comments"),
+            "description": body.get("description"),
+            "issueID": body.get("issueID"),
+            "priority": body.get("priority"),
+            "story_point": body.get("status"),
+            "taskID": body.get("taskID")
+        }
+        return Task(**task_data)
+  

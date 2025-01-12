@@ -323,15 +323,30 @@ def create_dropdown_cell(initial_content: Union[str, int]):
             },
         }
 
-def update_existing_task_issue_ids(existing_epic: Epic, new_epic: Epic, old_value: str) -> None:
-    """
-    Copies issueID from existing tasks to new tasks if the title matches oldValue.
-    """
-    print("Updating task")
-    for item in existing_epic.tasks:
-        for task in new_epic.tasks:
-            if old_value == item.title:
-                task.issueID = item.issueID
+async def handle_task(db_epic: Epic, new_epic: Epic, request: Request, plugin: PluginManager) -> None:
+    payload = await request.json()
+    db = request.app.state.db
+
+    old_value = payload.get("oldValue")
+    value = payload.get("value", None)
+
+    # If only old_value is provided (no 'value'), then delete that task from db and post to plugin
+    if old_value and not value:
+        for item in db_epic.tasks:
+            if item.title == old_value:
+                db.delete_task(item, db_epic.title)
+                await plugin.post_to_plugin(item, "task_delete")
+                return {"status": 200, "message": "Task deleted successfully."}
+    elif old_value and value:
+        for item in db_epic.tasks:
+            if item.title == old_value:
+                item.title = value
+                db.update_task(item.title, item.model_dump(mode='json'))
+                await plugin.post_to_plugin(db_epic, "update")
+        db.update_epic(new_epic.title, new_epic.model_dump(mode='json'))
+        await plugin.post_to_plugin(new_epic, "update_task")
+        return {"status": 200, "message": "Task updated successfully."}
+
 
 async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
     """
@@ -346,17 +361,17 @@ async def handle_sheet_webhook_event(request: Request, plugin: PluginManager):
 
     async def handle_epic():
         sheet_epic = db.parse_sheet(payload)
-        existing_epic = db.get_epic(sheet_epic.title)
+        db_epic = db.get_epic(sheet_epic.title)
 
-        if existing_epic is None:
+        if db_epic is None:
             db.create_epic(sheet_epic.model_dump(mode='json'))
-            await plugin.post_to_plugin(sheet_epic, "setup")
+            await plugin.post_to_plugin(sheet_epic, "epic_setup")
         else:
             if payload.get("sheetName") == "Tasks":
-                update_existing_task_issue_ids(existing_epic, sheet_epic, payload.get("oldValue"))
-                
-            db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
-            await plugin.post_to_plugin(sheet_epic, "update")
+                await handle_task(db_epic, sheet_epic, request, plugin)
+            elif payload.get("sheetName") == "Epic":
+                db.update_epic(sheet_epic.title, sheet_epic.model_dump(mode='json'))
+                await plugin.post_to_plugin(sheet_epic, "update_epic")
         
     async def handle_user():
         user = payload.get("user")

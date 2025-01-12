@@ -35,7 +35,7 @@ class PluginManager:
         
         if isinstance(response, dict): # Sometimes response returns <Response [200 OK]> instead of a dict. This handles that.
             print(f"Response: {response.json()}")
-            self.assign_issue_id(response.json(), payload)
+            #self.assign_issue_id(response.json(), payload)
             return response.json()
         else:
             return {"status": 200, "message": response}
