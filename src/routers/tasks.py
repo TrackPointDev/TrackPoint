@@ -42,7 +42,7 @@ class TaskHandler:
         return {"status": 200, "message": f"Task created successfully. Added to Epic '{epic.title}.'"}
 
     @router.get("/get")
-    async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None, epicID: Annotated[str, Header()] = None) -> Union[dict, list]:
+    async def get_tasks(self, taskID: Annotated[int | str | None, Header()] = None, epicID: Annotated[str, Header()] = None):
         """
         Get either a specific task or the entire list of tasks in the Firestore database.
 
@@ -53,12 +53,16 @@ class TaskHandler:
         Raises:
             HTTPException: If an error occurs during the fetch operation, it will be caught and a 500 error will be raised.
         """
+        # For some reason, headers are casted to strings even when an int is passed. This fixes that.
+        if isinstance(taskID, str) and taskID.isdigit():
+            taskID = int(taskID)
 
         try:
             epic = self.db.get_epic(identifier=epicID)
             if taskID is None:
                 return self.db.get_tasks_list(epic.title)
             elif taskID is not None:
+                print(f"Retrieving task with ID: {taskID}, in epic: {epic.title}")
                 return self.db.get_task(taskID, epic.title)
             else:   
                 raise HTTPException(status_code=404, detail="Please provide a valid task ID.")
@@ -82,7 +86,8 @@ class TaskHandler:
         try:
             # retreive the epic associated with the task.
             epic = self.db.get_epic(identifier=epicID)
-            self.db.update_task(task.issueID, epic.title)
+            self.db.update_task(task, epic.title)
+            print("Updating sheet task...")
             self.sheet.update_task(task, epic.spreadsheetId)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {e}")

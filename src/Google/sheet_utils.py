@@ -34,7 +34,6 @@ class SheetUtils:
     
     def update_task(self, task: Task, spreadsheetID: str):
         """Method for updating a task in the Google Sheets document."""
-
         body = self.update_task_row_request(task, spreadsheetID)
         self.update_sheets_data(body, "updating task", spreadsheetID)
 
@@ -84,7 +83,7 @@ class SheetUtils:
         # Encapsulate all request actions in a single list.
         return [append_cells_request, update_dimension_request]
     
-    def update_task_row_request(self, oldtask: str, task: Task, spreadsheetID: str):
+    def update_task_row_request(self, task: Task, spreadsheetID: str):
         """
         Builds a list of update requests for several columns for an existing profile row in the Sheets document.
         Retries the operation if a required column is added dynamically.
@@ -95,7 +94,7 @@ class SheetUtils:
         sheet = get_sheet(sheet_name, spreadsheetID)
 
         for i, row in enumerate(sheet.rows, start=1):
-            if row["title"] == oldtask:
+            if row["task id"] == task.taskID:
                 row_index = i
                 break
 

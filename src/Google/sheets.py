@@ -50,12 +50,16 @@ class Row:
         """Returns True if the row has a column with the given header"""
         return header in self
 
-    def to_task(self) -> Task:
+    def to_task(self) -> Optional[Task]:
         """Converts a row in the Google sheet to a Task object"""
+        title = self.values.get("title", "")
+        if not title:
+            return None
+
         return Task(
-            title=self.values.get("title", ""),
+            title=title,
             comments=self.values.get("duplicate / comments", ""),
-            issueID=self.values.get("issue id", ""),
+            taskID=self.values.get("task id", ""),
             priority=self.values.get("priority", ""),
             description=self.values.get("description", ""),
             story_point=self.values.get("story point", 0)
@@ -180,23 +184,31 @@ def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
     Transforms a sheet into an Epic object.
     """
 
-    # TODO: Hardcoding the indexes is utterly fucking retarded. For now it works, but refactor later
-
+    print(f"sheet columns: {sheet.headers}")
     title_index = 2
     problem_index = 3
     feature_index = 4
     value_index = 5
+    repo_owner_index = 8
+    repo_name_index = 9
+    installation_id_index = 10
     column_index = "b"
 
     title_row = sheet.row(title_index - 1)
     problem_row = sheet.row(problem_index - 1)
     feature_row = sheet.row(feature_index - 1)
     value_row = sheet.row(value_index - 1)
+    repo_owner_row = sheet.row(repo_owner_index - 1)
+    repo_name_row = sheet.row(repo_name_index - 1)
+    installation_id_row = sheet.row(installation_id_index - 1)
 
     title = title_row[column_index]
     problem = problem_row[column_index]
     feature = feature_row[column_index]
     value = value_row[column_index]
+    repo_owner = repo_owner_row[column_index]
+    repo_name = repo_name_row[column_index]
+    installation_id = installation_id_row[column_index]
 
     return Epic(
         title=title,
@@ -205,7 +217,10 @@ def transform_to_epics(sheet: Sheet, payload: Optional[dict]) -> Optional[Epic]:
         value=value,
         tasks=[],
         users=[],
-        spreadsheetId=payload.get("spreadsheetId")
+        spreadsheetId=payload.get("spreadsheetId"),
+        repoOwner=repo_owner,
+        repoName=repo_name,
+        installationID=installation_id
     )
 
 

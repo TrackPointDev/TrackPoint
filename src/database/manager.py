@@ -7,15 +7,7 @@ from fastapi import HTTPException
 from Google import sheets
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from firebase_functions.firestore_fn import (
-  on_document_created,
-  on_document_deleted,
-  on_document_updated,
-  on_document_written,
-  Event,
-  Change,
-  DocumentSnapshot,
-)
+
 # TODO: fuck doc_ref. Make all endpoints initialize doc_ref based on argument parameter.
 # TODO: Refactor DatabaseManager class, such that references are dynamícally passed from function caller.
 class DatabaseManager:
@@ -63,7 +55,7 @@ class DatabaseManager:
         try:
             doc_ref = self.db.collection(self.db_collection).document(epic_id)
             doc = doc_ref.get()
-            
+
             if doc.exists:
                 data = doc.to_dict()
                 tasks = data.get('tasks', [])
@@ -71,12 +63,11 @@ class DatabaseManager:
                 task_found = False
 
                 for item in tasks:
-                    if (isinstance(task.issueID, int) and item.get('issueID') == task.issueID) or \
-                        (isinstance(task.title, str) and item.get('title') == task.title):
+                    if (task.taskID is not None and item.get("issueID") == task.taskID):
                         item.update(task.model_dump(mode='json'))
                         task_found = True
                         break
-                
+
                 if not task_found:
                     print(f"Task with title: '{task.title}' not found.")
                     return None
@@ -88,7 +79,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error with writing to Google Cloud: {e}")
         
-    def get_task(self, task_identifier: Union[int, str], epic_id: str ) -> Optional[Dict[str, Any]]:
+    def get_task(self, task_identifier: Union[int, str], epic_id: str ):
         """
         Fetch specific task from Firestore document based on the task_identifier. Or return all tasks if no identifier is provided.
 
@@ -113,12 +104,14 @@ class DatabaseManager:
                 data = doc.to_dict()
                 tasks = data['tasks']
                 for task in tasks:
-                    if (isinstance(task_identifier, int) and task['issueID'] == task_identifier) or \
+                    if (isinstance(task_identifier, int) and task['taskID'] == task_identifier) or \
                        (isinstance(task_identifier, str) and task['title'] == task_identifier):
-                        return Task(**task)
-                return None
+                        print(f"Task with identifier '{task_identifier}' found in document '{epic_id}' in collection '{self.db_collection}'!")
+                        found_task = Task(**task)
+                        return found_task.model_dump(mode='json')
+                return {"status": 404, "message": f"No task with identifier '{task_identifier}' found in document '{epic_id}' in collection '{self.db_collection}'"}
             else:
-                raise Exception(f"No such document '{self.db_document}' in collection '{epic_id}'")
+                raise Exception(f"No such document '{epic_id}' in collection '{self.db_collection}'")
         except Exception as e:  # Catch any exceptions
             print(f"An error occurred: {e}")
             return None
@@ -270,7 +263,7 @@ class DatabaseManager:
         if epic_data:
             for task in tasks_sheet:
                 task_object = task.to_task()
-                if task_object.title != None:
+                if task_object != None:
                     task_list.append(task_object)
             epic_data.tasks = task_list
 
@@ -281,9 +274,6 @@ class DatabaseManager:
         )
 
         epic_data.users.append(user) 
-
-        # Convert the 'Epic' and 'Tasks' objects into JSON format and print them. Purely for debugging purposes.
-        #print(epic_data.model_dump(mode='json'))
 
         return epic_data
     
