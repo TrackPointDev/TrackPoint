@@ -26,10 +26,10 @@ async def lifespan(app: FastAPI):
     app.state.client = httpx.AsyncClient(timeout=120)
     app.state.db = DatabaseManager("epics")
     app.state.logger = logging.getLogger("uvicorn.error")
-    app.state.logger.info("Setting up NGROK Tunnel.")
-    ngrok.forward(5000, 
-                  domain="native-koi-miserably.ngrok-free.app", 
-                  authtoken=access_secret_version("trackpointdb", "NGROK_AUTHTOKEN", "latest"))
+    #app.state.logger.info("Setting up NGROK Tunnel.")
+    #ngrok.forward(5000, 
+                  #domain="native-koi-miserably.ngrok-free.app", 
+                  #authtoken=access_secret_version("trackpointdb", "NGROK_AUTHTOKEN", "latest"))
     app.state.logger.info(f"NGROK authenticated! Ingress established at: https://native-koi-miserably.ngrok-free.app")
 
     yield
@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
     app.state.logger.info("Closing HTTPX client.")
     await app.state.client.aclose()
     
-    app.state.logger.info("Tearing Down Ngrok Tunnel")
-    ngrok.disconnect()
+    #app.state.logger.info("Tearing Down Ngrok Tunnel")
+    #ngrok.disconnect()
 
 # Initialize FastAPI application
 app = FastAPI(title="TrackPoint-Backend", 
@@ -63,7 +63,7 @@ async def root(request: Request = None):
 
 def main():
     try:
-        uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info", reload=True)
+        uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), log_level="info")
     except KeyboardInterrupt:
         print("Closing listener")
 
