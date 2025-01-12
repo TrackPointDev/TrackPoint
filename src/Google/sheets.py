@@ -7,7 +7,7 @@ from itertools import zip_longest
 from typing import Dict, List, Union, Optional, get_args
 from googleapiclient.discovery import build
 
-from Google import authenticate_service
+from Google import authenticate_service_account
 from database.models import Task, Epic, TaskPriority
 from plugins import PluginManager
 
@@ -252,7 +252,7 @@ def _spreadsheet_range(
 
 
 def get_sheets_api():
-    credentials = authenticate_service()
+    credentials = authenticate_service_account()
     service = build("sheets", "v4", credentials=credentials)
     sheets_api = service.spreadsheets()
 
@@ -294,7 +294,6 @@ def create_number_cell(num: Optional[int] = None):
 
 def create_dropdown_cell(initial_content: Union[str, int]):
         priority_options = get_args(TaskPriority)
-        print(f"Priority options: {priority_options}")
         values = [{"userEnteredValue": option} for option in priority_options]
         return {
             "dataValidation": {

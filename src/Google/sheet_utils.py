@@ -4,7 +4,6 @@ from itertools import zip_longest
 from typing import Dict, List, Any, Union, Optional
 from googleapiclient.discovery import build
 
-from Google import authenticate_service
 from database.models import Task, Epic
 from Google.sheets import get_sheet, get_sheets_api, create_text_cell, create_number_cell, create_dropdown_cell
 
@@ -14,11 +13,9 @@ class SheetUtils:
     """This class contains utility methods for writing to Google Sheets."""
 
     def __init__(self, request: Request):
-        self.request = request
         self.logger = request.app.state.logger
         self.client = request.app.state.client
         self.db = request.app.state.db
-        self.service = authenticate_service()
         self.tasks_to_add = []
 
     def add_task(self, task: Task, batch: Optional[bool] = False, limit: int = None, spreadsheetID: str = None):

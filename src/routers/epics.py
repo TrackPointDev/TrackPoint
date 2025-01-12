@@ -11,7 +11,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-db = DatabaseManager("epics", "showcase")
+db = DatabaseManager("epics")
 
 class EpicManager:
     def __init__(self, request: Request):

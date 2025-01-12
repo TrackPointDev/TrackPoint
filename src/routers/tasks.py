@@ -1,5 +1,5 @@
 from typing import Annotated, Union
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from fastapi_utils.cbv import cbv
 
 from database.models import Task
@@ -14,7 +14,6 @@ router = APIRouter(
 @cbv(router)
 class TaskHandler:
     def __init__(self, request: Request):
-        self.client = request.app.state.client
         self.logger = request.app.state.logger
         self.db = request.app.state.db
         self.sheet = sheet_utils.SheetUtils(request)

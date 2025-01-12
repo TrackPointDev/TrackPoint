@@ -1,7 +1,8 @@
 import os.path
 
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
+#from google.oauth2.credentials import Credentials
+from google.oauth2.service_account import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from secret_manager import access_secret_version_json
 
@@ -39,5 +40,20 @@ def authenticate_service():
             creds = flow.run_local_server(port=0)
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
+
+    return creds
+
+def authenticate_service_account():
+    project_id = "trackpointdb"
+    secret_id = "BACKEND_SERVICE_ACCOUNT"
+    version_id = "latest"
+    service_account_creds = access_secret_version_json(project_id, secret_id, version_id)
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets"
+    ]
+
+    creds = None
+    creds = Credentials.from_service_account_info(service_account_creds, scopes=scopes)
 
     return creds
